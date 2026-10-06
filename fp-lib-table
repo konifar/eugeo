@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "eugeo")(type "KiCad")(uri "${KIPRJMOD}/footprints/eugeo.pretty")(options "")(descr "eugeo project footprints"))
+)
