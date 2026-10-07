@@ -21,17 +21,17 @@
 | U1 | 1 | ATMEGA328P-PU | マイコン | [Mouser](https://www.mouser.jp/ProductDetail/556-ATMEGA328P-PU) / [秋月電子](https://akizukidenshi.com/catalog/g/g103142/) |
 | (U1) | 1 | 28pin narrow | IC ソケット | [秋月電子](https://akizukidenshi.com/catalog/g/g100013/) |
 | Y1 | 1 | HC49-4H 16MHz | 水晶振動子 | [Mouser](https://www.mouser.jp/ProductDetail/449-LFXTAL022786BULK) |
-| plate | 2 | `gerbers/eugeo-plate.zip` | スイッチプレート（左右共通、FR4 1.5mm） | |
+| plate | 2 | `gerbers/eugeo-plate.zip` または `lasercut/yushakobo/eugeo-switch-plate_*.svg` | スイッチプレート（左右共通、FR4 1.5mm または POM 1.5mm） | JLCPCB / [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) |
 | case | 1 | `case/eugeo-case.step` | ケース（JLC3DP SLA レジン） | |
 | standoff | 8 | M2 3.5mm メス-メス | PCB - プレート間（1.5mm 厚プレートの場合） | |
 | screw | 8 | M2×10 なべ | ケース底 → PCB → スペーサー | |
 | screw | 8 | M2×3 | プレート → スペーサー（任意） | |
 | feet | 4〜6 | ゴム足 | ケース底のふちに貼る | |
-| cover | 1 | `plates/eugeo-cover.dxf` | 中央カバー（2mm アクリル、レーザーカット） | |
+| cover | 1 | `lasercut/yushakobo/eugeo-cover_*.svg` | 中央カバー（アクリル クリア 2mm、遊舎工房レーザー加工） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut) |
 | standoff | 4 | M2 10mm メス-メス | PCB - 中央カバー間 | |
 | screw | 8 | M2×4 | 中央カバーのスペーサー固定（PCB 下 4 本 + カバー上 4 本） | |
-| plate foam | 2 | 3.5mm PORON / PE | `foam/eugeo-plate-foam`（任意） | |
-| case foam | 2 | 3mm PORON / EVA | `foam/eugeo-case-foam`（任意） | |
+| plate foam | 2 | 3mm PORON | `foam/eugeo-plate-foam`（任意） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) |
+| case foam | 2 | 3mm PORON | `foam/eugeo-case-foam`（任意） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) |
 
 ケースを使わない場合は、ケースの代わりにボトムプレート（`gerbers/eugeo-bottom.zip`）、PCB とボトムの間に M2 8mm スペーサー 8 本、M2×4 ネジ 16 本を使います。
 

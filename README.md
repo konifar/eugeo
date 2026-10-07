@@ -53,6 +53,7 @@ BOOT ボタンは ROW3（PD5）と同じピンにつながっています。通�
 | `plates/` | スイッチプレート（左右共通、2 枚注文）、中央カバー、ボトムプレートの KiCad データと DXF |
 | `case/` | Mojo60 風の丸いトレイケースと中央カバーの STEP / STL |
 | `foam/` | プレートフォームとケースフォームの DXF と原寸 PDF |
+| `lasercut/yushakobo/` | 遊舎工房レーザー加工サービス用の SVG（中央カバー / スイッチプレート / フォーム） |
 | `jlcpcb/` | ホットスワップソケットの JLCPCB 実装用 BOM / CPL |
 | `gerbers/*.zip` | 製造用ガーバー（PCB、プレート、ボトム） |
 | `firmware/qmk/keyboards/eugeo/` | QMK 用キーボード定義とデフォルトキーマップ |
@@ -192,13 +193,36 @@ JLC3DP の SLA で作る場合は、見積もり画面で透明系のレジン�
 
 | ファイル | 位置 | 推奨素材 | 形 |
 |---|---|---|---|
-| `foam/eugeo-plate-foam` | プレートと PCB の間（3.5 mm） | 3.5 mm PORON / PE | プレートと同じ外形、スイッチ下部を逃がす 14.5 mm 角穴、スペーサー用 φ5 穴 |
-| `foam/eugeo-case-foam` | PCB とケース底の間（5 mm） | 3 mm PORON / EVA | キー部分のみ（中央の部品エリアは空ける）、ケースの支柱用 φ7 穴 |
+| `foam/eugeo-plate-foam` | プレートと PCB の間（3.5 mm） | 3 mm PORON | プレートと同じ外形、スイッチ下部を逃がす 14.5 mm 角穴、スペーサー用 φ4.4 穴 |
+| `foam/eugeo-case-foam` | PCB とケース底の間（5 mm） | 3 mm PORON | キー部分のみ（中央の部品エリアは空ける）、ケースの支柱用 φ7 穴 |
 
 `.dxf` はレーザーカット業者向け、`-1to1.pdf` は手で切るための原寸の型紙です。PDF は A4 横で、倍率 100% で印刷し、100 mm のスケールバーで寸法を確かめてから使ってください。
 ケースフォームは 3 mm にすると、裏面のソケット（高さ約 1.85 mm）との間にほぼすき間がない厚さになります。
-JLCPCB ではフォームのカットは扱っていないため、国内のレーザーカットサービスに出すか手で切ってください。
+JLCPCB ではフォームのカットは扱っていないため、遊舎工房のレーザー加工（下記）に出すか手で切ってください。
 スイッチプレート（`gerbers/eugeo-plate.zip`）は、ケースの内側に 1 mm のすき間で収まり、ケースのふちより 4 mm 低い位置に来ることを確認済みです。
+
+## 遊舎工房のレーザー加工
+
+[遊舎工房のレーザー加工サービス](https://yushakobo.jp/lasercut/)に、そのまま入稿できる SVG を `lasercut/yushakobo/` に用意しました。
+遊舎工房配布の Inkscape テンプレートを土台にし、注文サイズの作業領域だけを残しています。
+
+| ファイル | 注文するサービス / 素材 / 厚さ / サイズ | 中身 |
+|---|---|---|
+| `eugeo-cover_acrylic-clear-2mm_115x300.svg` | [レーザー加工サービス](https://shop.yushakobo.jp/products/lasercut)（アクリル）/ アクリル クリア / 2mm / 115x300 | 中央カバー 1 枚 |
+| `eugeo-switch-plate_pom-1.5mm_245x245.svg` | [レーザー加工サービス（その2）](https://shop.yushakobo.jp/products/lasercut-2) / POM / 1.5mm / 245x245 | スイッチプレート 2 枚（左右共通） |
+| `eugeo-foam_poron-3mm_500x100.svg` | レーザー加工サービス（その2）/ PORON / 3mm / 500x100 | プレートフォーム 2 枚 + ケースフォーム 2 枚 |
+
+- 穴などの内側はカット①（赤）、外形はカット②（青）です。内側を先に切ってから部品を切り離す順番になります
+- 線幅 0.001 mm、塗りなし、RGB、ファイル名は半角英数字です。シート端から 8 mm、部品同士は 5 mm 空けています（規定は 3 mm / 2 mm 以上）
+- レーザーは線の上を切るため、穴は線より少し大きく、外形は少し小さく仕上がります。POM プレートのスイッチ穴（14.0 mm）が緩い場合は、注文時に相談してください
+- スイッチプレートは JLCPCB の FR4（`gerbers/eugeo-plate.zip`）と POM のどちらで作っても同じ形です。POM のほうが打鍵感が柔らかくなります
+
+テンプレートはリポジトリに含めていません。作り直すときは、遊舎工房の [Laser_Cut_template](https://drive.google.com/drive/folders/1BYeC-_gsrWUxI49BNqbQBk6OOC30LgTS) の Inkscape フォルダにある `Laser_acrylic_template.svg`、`Laser_POM_template.svg`、`Laser_Poron_template.svg` を 1 つのフォルダに置き（POM / Poron はファイル名を小文字の `pom` / `poron` にする）、次を実行します。
+
+```bash
+python3 scripts/export_yushakobo_svg.py <テンプレートのフォルダ>
+python3 scripts/check_lasercut_svg.py
+```
 
 ## 組み立て（基板）
 
@@ -259,6 +283,22 @@ VID / PID（`0x6B6E` / `0x4547`）は自分で決めた値です。登録前に�
 ```bash
 KP=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
 $KP scripts/verify_design.py
+```
+
+### 発注前チェック
+
+発注の前に `scripts/preorder_check.py` を実行してください（2026-10-07 時点で 22 項目すべて合格）。DRC で見えない次の点を確かめます。
+
+- 前の版との差分が、意図した部品の追加・削除だけであること（ほかのパッドの位置と接続が変わっていない）
+- 全部品が `design.py` どおりの位置・向き・面にあり、外形も設計どおりであること
+- スペーサー・ネジ頭・ケースの支柱が当たる範囲に、むき出しの銅箔がないこと。ビアがすべてレジストで覆われていること（マスクのガーバーでも確認）
+- 実際の基板の最小値（線幅 0.25、ビア φ0.3 / 0.6、穴、スロット、シルク文字 1.0 mm）が JLCPCB の製造基準を満たすこと
+- `gerbers/eugeo.zip` が今の基板から出したものと一致し、ドリルデータに M2 穴 12 個が設計位置どおりにあること
+- JLCPCB の実装座標、スイッチプレート・中央カバー・ボトムプレートの穴が基板の穴と一致すること
+- 遊舎工房向け SVG が入稿ルールを満たすこと、49 項目の機能チェックが通ること
+
+```bash
+$KP scripts/preorder_check.py --base <前回発注した版の git リビジョン>
 ```
 
 ## 未検証の点

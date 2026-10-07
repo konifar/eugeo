@@ -3,7 +3,7 @@
     $KP scripts/build_foams.py
 
 Both pieces are left/right symmetric: cut one shape twice (flip it for the other side).
-  plate foam : between switch plate and PCB (3.5 mm gap), same outline as the plate
+  plate foam : between switch plate and PCB (3.5 mm gap, 3 mm PORON), same outline as the plate
   case foam  : between PCB and case floor (5 mm gap; 3 mm foam clears the 1.8 mm sockets),
                key area only - the centre (diodes / MCU / USB-C) stays open
 """
@@ -19,7 +19,7 @@ import design  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SWITCH_CUT = 14.5        # clears the switch bottom housing under the plate
-STANDOFF_HOLE = 5.0      # M2 3.5 mm hex standoff
+STANDOFF_HOLE = 4.4      # M2 3.5 mm hex standoff (~4.0 mm across corners); keeps a 1 mm web to the switch cut-outs
 BOSS_HOLE = design.CASE_BOSS_D + 1.5
 CASE_FOAM_INSET = 0.5    # foam smaller than the case pocket on every side
 CENTER_GAP = 0.5         # case foam stops this far before the centre component area
@@ -74,7 +74,7 @@ def main():
             bp.rounded_rect(b, cx - h, cy - h, cx + h, cy + h, 0.5)
     for hx, hy in design.HOLES[:4]:
         bp.hole(b, hx, hy, STANDOFF_HOLE)
-    finish(b, path, "eugeo plate foam - cut 2 (flip one), 3.5 mm PORON / PE")
+    finish(b, path, "eugeo plate foam - cut 2, 3 mm PORON")
 
     # case foam: pocket outline minus inset, cut short of the centre area
     pocket = design.CASE_CLEARANCE - CASE_FOAM_INSET
@@ -82,7 +82,7 @@ def main():
     bp.rounded_rect(b, x1 - pocket, y1 - pocket, design.LEFT_END - CENTER_GAP, y2 + pocket, 1.5)
     for hx, hy in design.HOLES[:4]:
         bp.hole(b, hx, hy, BOSS_HOLE)
-    finish(b, path, "eugeo case foam - cut 2 (flip one), 3 mm PORON / EVA")
+    finish(b, path, "eugeo case foam - cut 2 (flip one), 3 mm PORON")
 
 
 if __name__ == "__main__":
