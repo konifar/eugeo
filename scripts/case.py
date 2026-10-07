@@ -32,7 +32,7 @@ PLATE_TOP = PCB_T + 5.0                              # MX: plate top is 5 mm abo
 # --- case parameters --------------------------------------------------------
 CLEARANCE = design.CASE_CLEARANCE  # keycaps sit ~1.1 mm off the wall
 WALL = 8.0               # pocket wall to outer surface (at the rim)
-Z_TOP = PLATE_TOP + 4.0  # rim height: hides most of the switch housings (Mojo60-like high rim)
+Z_TOP = PLATE_TOP + 6.5  # rim height: hides the switch housings, keycaps sit just above (high profile)
 FLOOR_TOP = -5.0         # space under the PCB for the USB-C receptacle / sockets / leads
 FLOOR_T = 3.0
 FRONT_BOTTOM = -10.0     # outer bottom at the front edge
