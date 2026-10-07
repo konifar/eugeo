@@ -1,0 +1,5 @@
+(version 1)
+# One thermal spoke is enough for the through-hole GND pads around the regulator,
+# where tracks leave no room for a second one. Connectivity is still checked by DRC.
+(rule "thermal spokes"
+  (constraint min_resolved_spokes 1))

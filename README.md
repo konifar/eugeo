@@ -24,15 +24,18 @@
 | 外形 | 60% トレイマウントケース互換 | 284.9 × 75.35 mm、M2 穴 8 箇所でサンドイッチ |
 | ドーターボード用コネクタ (J3-J5) | あり | 削除 |
 | 中央カバー | 2 mm アクリル、M2 10 mm スペーサー 4 本 | 同じ構成（穴位置はダイオード配置に合わせて変更） |
+| マイコン | ATmega328P-PU（DIP）+ V-USB（USB 1.1 Low Speed） | RP2040 + 2 MB QSPI フラッシュ（USB Full Speed、UF2 書き込み） |
+| 電源 | USB 5 V 直結 | MCP1700 で 3.3 V（TO-92） |
+| 書き込み | ISP ヘッダ（2x3） | BOOT ボタン + USB（UF2）。ISP ヘッダは不要になったので削除 |
 
-マイコン（ATmega328P-PU + V-USB）、水晶、USB 保護回路、RESET / BOOT ボタン、ISP ヘッダの回路は Lumberjack と同じです。
-中央にダイオードと MCU を並べる見た目も踏襲しています。
+マイコンまわりの表面実装部品（RP2040、フラッシュ、0402 のコンデンサなど）は JLCPCB に実装してもらい、それ以外はスルーホール部品のまま残しています。
+水晶（HC49）、セラミック・電解コンデンサ、LDO（TO-92）、アキシャル抵抗、タクトスイッチ、LED、ダイオード列が中央に並ぶ、Lumberjack の「部品を見せる」見た目を踏襲しています。
 
 ## マトリクス
 
 左右のブロックで行を分け、列を共有させた 8 行 × 6 列です。
 左右の対称位置の列（左 C0 と右 C11 など）を基板下端の 1 本の配線で共有するので、ROW の配線が MCU をまたがずに済みます。
-使う I/O は 14 本です（PC0 / PC2 は空き）。
+RP2040 の左辺のピンから左ブロックの行と列 3 本、右辺のピンから右ブロックの行と列 3 本を出し、下辺は水晶・RUN・LED、上辺は QSPI フラッシュと USB に使っています。
 
 | 物理位置 | マトリクス |
 |---|---|
@@ -41,14 +44,11 @@
 
 | 設定 | 値 |
 |---|---|
-| MATRIX_ROW_PINS | D0, D1, D4, D5, C5, C1, B5, B1 |
-| MATRIX_COL_PINS | B4, B3, B2, B0, D7, D6 |
+| MATRIX_ROW_PINS | GP1, GP3, GP5, GP6, GP28, GP26, GP24, GP23 |
+| MATRIX_COL_PINS | GP9, GP10, GP11, GP20, GP19, GP18 |
 | DIODE_DIRECTION | COL2ROW |
-| LED1 (赤) / LED2 (緑) | C4 / C3 |
-| USB D+ / D- | D2 / D3 |
-| BOOT ボタン | D5（ROW3 と共用） |
-
-BOOT ボタンは ROW3（PD5）と同じピンにつながっています。通常使用中に BOOT だけを押してもキー入力は出ませんが、BOOT を押したまま左ブロック最下段のキーを押すと、同じ列のほかのキーも押されたと誤検出されます。
+| LED1 (赤) / LED2 (緑) | GP16 / GP17 |
+| BOOT ボタン | QSPI_SS（RP2040 標準の BOOTSEL。1k 経由で GND に落とす） |
 
 ## ファイル構成
 
@@ -60,10 +60,11 @@ BOOT ボタンは ROW3（PD5）と同じピンにつながっています。通�
 | `case/` | Mojo60 風の丸いトレイケースと中央カバーの STEP / STL |
 | `foam/` | プレートフォームとケースフォームの DXF と原寸 PDF |
 | `lasercut/yushakobo/` | 遊舎工房レーザー加工サービス用の SVG（中央カバー / スイッチプレート / フォーム） |
-| `jlcpcb/` | ホットスワップソケットの JLCPCB 実装用 BOM / CPL |
+| `jlcpcb/` | JLCPCB 実装用 BOM / CPL（表面実装部品とホットスワップソケット） |
 | `gerbers/*.zip` | 製造用ガーバー（PCB、プレート、ボトム） |
-| `firmware/qmk/keyboards/eugeo/` | QMK 用キーボード定義とデフォルトキーマップ |
-| `scripts/` | 回路図・基板を生成するスクリプト一式 |
+| `firmware/qmk/keyboards/eugeo/` | QMK 用キーボード定義とキーマップ（default / via） |
+| `firmware/*.uf2` | ビルド済みファームウェア |
+| `scripts/` | 回路図・基板・裏面アート（`stump_art.py`）を生成するスクリプト一式 |
 
 ## 生成手順
 
@@ -75,9 +76,9 @@ FREEROUTING_JAR=/path/to/freerouting-2.1.0.jar scripts/build_all.sh
 ```
 
 1. `gen_schematic.py` で回路図を生成し、`check_netlist.py` で `design.py` とネットを照合
-2. `build_pcb.py` で部品配置と、キー部分・ダイオード列・USB 端子まわりの配線を規則的に引く
-3. `route.sh` で残り（MCU 周り）を Freerouting 2.1.0 で自動配線
-4. `cleanup_dangling.py` で余った配線を削除し、`fill_zones.py` で裏面 GND ベタを流す
+2. `build_pcb.py` で部品配置と、キー部分・ダイオード列・USB 端子・RP2040 まわりの配線を引く。RP2040 は電源ピンをパッドの内側の +3V3 リングでまとめ、QSPI・水晶・パスコン・各ピンの引き出しまでを手配線している
+3. `route.sh` で残り（引き出した先から各部品まで）を Freerouting 2.1.0 で自動配線
+4. `cleanup_dangling.py` で余った配線を削除し、`fill_zones.py` で表裏の GND ベタを流し、`stump_art.py` で裏面のアートを描く
 5. DRC（回路図との整合チェック込み）
 
 Freerouting の結果は実行ごとに変わり、まれに未配線が残ります。その場合は `build_all.sh` を再実行してください。
@@ -107,23 +108,31 @@ PCB の注文設定は既定値（FR-4、1.6 mm、HASL）のままで問題あ�
 ケースは JLC3DP の 3D Printing で `case/eugeo-case.step`（または `.stl`）をアップロードし、素材に SLA レジン（9600 Resin など）を選びます。
 最大造形サイズ（9600 Resin は 780 × 780 × 530 mm）には十分収まります。
 
-### ソケットの実装を JLCPCB に頼む場合
+### 表面実装部品とソケットの実装を JLCPCB に頼む
 
-ホットスワップソケット 48 個だけを JLCPCB の PCBA で実装し、残りのスルーホール部品は自分ではんだ付けする想定です。
-PCB の見積もりページで「PCB Assembly」をオンにし、Assembly Side を **Bottom Side** にして、次のファイルをアップロードします。
+RP2040 まわりの表面実装部品（表面）とホットスワップソケット 48 個（裏面）を JLCPCB の PCBA で実装し、残りのスルーホール部品は自分ではんだ付けする想定です。
+表裏両面の実装になるので Standard PCBA を選び、Assembly Side は **Both Sides** にして次のファイルをアップロードします。
 
 | ファイル | 内容 |
 |---|---|
-| `jlcpcb/eugeo-bom.csv` | MX1〜MX48 を CPG151101S11 互換ソケット（LCSC C41430893）として指定 |
-| `jlcpcb/eugeo-cpl.csv` | 各ソケット本体の中心座標（ガーバーと同じ原点）、実装面 Bottom、回転 0 |
+| `jlcpcb/eugeo-bom.csv` | ソケット（LCSC C41430893）と表面実装部品（RP2040 C2040、W25Q16JVSSIQ C131025、USBLC6-2SC6 C7519、0402 のコンデンサ・抵抗） |
+| `jlcpcb/eugeo-cpl.csv` | 実装座標（ガーバーと同じ原点）。ソケットは本体中心・裏面・回転 0、表面実装部品は KiCad の部品位置 |
 
-2026-10-06 に実際にアップロードして確認した結果です（カート投入・注文はしていません）。
+ソケットの回転は 2026-10-06 に JLCPCB の配置プレビュー（裏面）で確認済みです（ソケットの突起が φ3.05 穴に、端子がパッドに重なる）。
+表面実装部品の回転は KiCad の値をそのまま出しています。部品ごとに JLCPCB の基準向きと違うことがあるので、注文前に配置プレビューで RP2040・フラッシュ・USBLC6 の 1 番ピンの向きを確かめ、ずれていれば `scripts/export_jlc_pcba.py` の `ROT_OFFSET` で補正してください。
 
-- Economic PCBA でも裏面実装を選べ、C41430893（在庫約 26 万個）で実装できる
-- 部品配置プレビュー（裏面）で、ソケットの突起が基板の φ3.05 穴に、端子がパッドに重なることを確認。回転角の補正は不要
-- 見積もり: PCB 5 枚 + ソケット実装 5 枚分で ¥5,955（PCB ¥2,269、PCBA ¥3,686。送料別）
+Kailh 純正ソケット（C5184526）にしたい場合は `scripts/export_jlc_pcba.py` の `LCSC` を書き換えてください。
 
-Kailh 純正品（C5184526）は Standard PCBA 専用で、確認時点では在庫が 241 個と足りませんでした。純正にしたい場合は `scripts/export_jlc_pcba.py` の `LCSC` を書き換え、Standard PCBA で配置プレビューを確認してから注文してください。
+## 裏面のデザイン
+
+基板の裏面は「凍てついた切り株」がテーマです（`scripts/stump_art.py`、`build_all.sh` の中で自動生成）。
+
+- 中央に年輪・樹皮・干割れのある切り株をシルクで描き、左右の端に向かって霜の結晶（シダ状の霜）が伸びる
+- キーの並ぶ部分にはシルクの雪の結晶を散らす
+- 大きめの雪の結晶 7 個はソルダーレジストの開口で、GND ベタの銅がそのまま（HASL なら銀色に）見える。配線・ビア・穴のない GND ベタの上にだけ置く
+- シルクはパッド・穴・既存の文字の周りで自動的に切り取り、DRC の警告が出ないようにしている
+
+レジストの色は青（Blue）を勧めます。白いシルクと銀色の結晶が氷のように見えます。
 
 ## ケース
 
@@ -181,7 +190,7 @@ Lumberjack と同じく、中央の部品（ダイオード列・MCU・USB 周�
 |---|---|
 | 大きさ | 56.2 × 75.35 mm、角 R3、厚さ 2 mm |
 | 取り付け | 基板中央の M2 穴 4 か所（H9〜H12）に M2 10 mm のメス-メススペーサーを立て、下から M2×4 で基板に、上から M2×4 でカバーを留める |
-| 高さ | カバーの下面は基板上面から 10 mm。下でいちばん高い ISP ピンヘッダ（8.54 mm）との間に 1.46 mm のすき間 |
+| 高さ | カバーの下面は基板上面から 10 mm。下でいちばん高い LED1（8.29 mm）との間に 1.71 mm のすき間 |
 | ケースとの関係 | カバーの上面はケースのふちより約 0.5 mm 上。ケース・キーキャップとは重ならない |
 
 | ファイル | 用途 |
@@ -240,32 +249,29 @@ python3 scripts/check_lasercut_svg.py
 ## ファームウェア
 
 `firmware/qmk/keyboards/eugeo` を qmk_firmware の `keyboards/` にコピーしてビルドします。
-2026-10-06 時点の qmk_firmware でビルドできることを確認済みです（14,294 / 28,672 バイト）。ビルド済みの `firmware/eugeo_default.hex` も置いてあります。
-
-```bash
-qmk compile -kb eugeo -km default
-```
-
-ブートローダーは Lumberjack と同じ USBaspLoader（16 MHz、D+ = PD2、D- = PD3、BOOT = PD5）を使えます。
-BOOT を押しながら RESET を押して離すと書き込みモードに入ります。
-ブートローダーが入っていない ATmega328P には、Lumberjack の[ビルドガイド](https://github.com/peej/lumberjack-keyboard/blob/master/guide.md#bootloader)の手順で ISP から書き込んでください。
-
-### Remap / VIA
-
-`via` キーマップは VIA 対応（`VIA_ENABLE = yes`）で、[Remap](https://remap-keys.app) と VIA のどちらからでもキー配置を変えられます。
-ビルド済みの `firmware/eugeo_via.hex` もあります（14,532 / 28,672 バイト、RAM 388 / 2,048 バイト）。
+2026-10-07 時点の qmk_firmware でビルドできることを確認済みです。ビルド済みの `firmware/eugeo_default.uf2` / `firmware/eugeo_via.uf2` も置いてあります。
 
 ```bash
 qmk compile -kb eugeo -km via
 ```
 
-1. BOOT を押しながら RESET を押して離し、書き込みモードにする（USBasp として認識される）
-2. `qmk flash -kb eugeo -km via`、または QMK Toolbox / avrdude（`-c usbasp -p m328p`）で `eugeo_via.hex` を書き込む
-3. Chrome か Edge で Remap を開き、「Configure」から eugeo を接続する
-4. Remap のカタログに未登録のうちは定義ファイルを求められるので、`firmware/via/eugeo.json` を読み込む
+RP2040 は ROM にブートローダーを持っているので、ブートローダーの書き込みは要りません。
+
+1. BOOT を押したまま RESET を押して離す（何も書き込まれていない新品の RP2040 は USB をつなぐだけでよい）
+2. `RPI-RP2` という USB ドライブとして認識される
+3. `eugeo_via.uf2` をそのドライブにコピーすると、書き込み後に自動で再起動する
+
+`qmk flash -kb eugeo -km via` でも同じことができます。キーマップに `QK_BOOT` を割り当てておけば、BOOT ボタンを使わずに書き込みモードに入れます。
+
+### Remap / VIA
+
+`via` キーマップは VIA 対応（`VIA_ENABLE = yes`）で、[Remap](https://remap-keys.app) と VIA のどちらからでもキー配置を変えられます。
+
+1. Chrome か Edge で Remap を開き、「Configure」から eugeo を接続する
+2. Remap のカタログに未登録のうちは定義ファイルを求められるので、`firmware/via/eugeo.json` を読み込む
 
 `firmware/via/eugeo.json` は VIA v3 形式の定義ファイルで、物理配列どおり左右ブロックの間を 3U 空けています。VIA の Design タブでもそのまま読み込めます。
-Remap の書き込み機能は USBaspLoader に対応していないため、書き込みは上記の手順で行ってください。
+Remap のカタログに登録すると、Remap の画面からファームウェアの書き込み（UF2 のダウンロードとコピーの案内）もできるようになります。
 
 Remap のカタログに登録すれば、定義ファイルを読み込まなくても自動で認識されます。登録は Remap に GitHub アカウントでログインして申請し、ファームウェアのソースの場所（GitHub のリポジトリなど）を示します。
 VID / PID（`0x6B6E` / `0x4547`）は自分で決めた値です。登録前に、他のキーボードと重複していないか Remap 上で確認してください。
@@ -275,15 +281,16 @@ VID / PID（`0x6B6E` / `0x4547`）は自分で決めた値です。登録前に�
 実機は作っていないため、基板データからの検証で、はんだ付けすれば動くことを確認しています。
 
 - KiCad の DRC: 違反 0、未接続 0、回路図との整合 OK。ERC も 0 件
-- `scripts/verify_design.py`（49 項目すべて合格）
-  - ATmega328P のピン名がデータシートと一致し、電源・GND・水晶・リセットの接続が正しいこと
-  - USB: D+ が PD2（INT0）、D- が PD3、D- の 1.5k プルアップ、ツェナー、CC の 5.1k、VBUS のポリスイッチ
-  - ISP ヘッダの接続がシルク表記（RST SCK MISO / GND MOSI VCC）と一致すること
-  - LED とコンデンサの極性、ダイオードの向き（COL2ROW）
-  - 48 キーすべてについて、基板上の行・列のピンが QMK の `keyboard.json` と一致すること
-  - BOOT ボタンが Lumberjack のブートローダーと同じ PD5 にあること
-- Lumberjack の回路との差分: USB・電源・水晶・リセット・ISP の周辺回路は同一。違いは LED とマトリクス用のピン割り当てだけで、どちらも意図したもの
-- 中央カバー: 下面と部品の最小すき間 1.46 mm（ISP ピンヘッダ）、カバーとケース・部品の干渉 0（`scripts/check_case_fit.py`）
+- `scripts/verify_design.py`（59 項目すべて合格）
+  - RP2040 のシンボルのピン名がデータシート（QFN-56）と一致すること
+  - 電源: IOVDD 6 本・ADC_AVDD・VREG_VIN・USB_VDD が +3V3、VREG_VOUT が DVDD 2 本に、パスコンの数と RP2040 からの距離、MCP1700 のピン配置
+  - 12 MHz 水晶と 1k 直列抵抗、22 pF、RUN のプルアップと RESET、BOOT（QSPI_SS を 1k で GND へ）
+  - QSPI フラッシュの 8 ピンが RP2040 の QSPI 信号と一致すること
+  - USB: D+ / D- が 27Ω 経由で USB_DP / USB_DM に、USBLC6、CC の 5.1k、VBUS のポリスイッチ
+  - LED とコンデンサの極性、ダイオードの向き（COL2ROW）、QMK の LED ピン設定
+  - 48 キーすべてについて、基板上の行・列の GPIO が QMK の `keyboard.json` と一致すること
+- RP2040 まわりは、電源ピンをパッドの内側の +3V3 リングでまとめ、+1V1 は裏面経由で 3 ピンをつなぎ、QSPI・水晶・パスコン・行と列の引き出しまでを手配線しています。0.4 mm ピッチの間をすり抜ける配線はありません
+- 中央カバー: カバー下面と部品の最小すき間 1.71 mm（LED1）、カバーとケース・部品の干渉 0（`scripts/check_case_fit.py`）
 - ソケットのフットプリント: パッド位置・サイズが [keyswitch-kicad-library](https://github.com/perigoso/keyswitch-kicad-library) の SW_Hotswap_Kailh_MX_1.00u と一致。ソケットの突起が入る穴は同ライブラリに合わせて φ3.05 mm
 
 ```bash
@@ -293,15 +300,15 @@ $KP scripts/verify_design.py
 
 ### 発注前チェック
 
-発注の前に `scripts/preorder_check.py` を実行してください（2026-10-07 時点で 22 項目すべて合格）。DRC で見えない次の点を確かめます。
+発注の前に `scripts/preorder_check.py` を実行してください（2026-10-07 時点で 23 項目すべて合格）。DRC で見えない次の点を確かめます。
 
 - 前の版との差分が、意図した部品の追加・削除だけであること（ほかのパッドの位置と接続が変わっていない）
 - 全部品が `design.py` どおりの位置・向き・面にあり、外形も設計どおりであること
 - スペーサー・ネジ頭・ケースの支柱が当たる範囲に、むき出しの銅箔がないこと。ビアがすべてレジストで覆われていること（マスクのガーバーでも確認）
-- 実際の基板の最小値（線幅 0.25、ビア φ0.3 / 0.6、穴、スロット、シルク文字 1.0 mm）が JLCPCB の製造基準を満たすこと
+- 実際の基板の最小値（線幅 0.15、ビア φ0.3 / 0.6、穴、スロット、シルク文字 1.0 mm）が JLCPCB の製造基準を満たすこと
 - `gerbers/eugeo.zip` が今の基板から出したものと一致し、ドリルデータに M2 穴 12 個が設計位置どおりにあること
-- JLCPCB の実装座標、スイッチプレート・中央カバー・ボトムプレートの穴が基板の穴と一致すること
-- 遊舎工房向け SVG が入稿ルールを満たすこと、49 項目の機能チェックが通ること
+- JLCPCB の実装座標（ソケットと表面実装部品）と LCSC 番号、スイッチプレート・中央カバー・ボトムプレートの穴が基板の穴と一致すること
+- 遊舎工房向け SVG が入稿ルールを満たすこと、59 項目の機能チェックが通ること
 
 ```bash
 $KP scripts/preorder_check.py --base <前回発注した版の git リビジョン>
@@ -310,6 +317,7 @@ $KP scripts/preorder_check.py --base <前回発注した版の git リビジョ�
 ## 未検証の点
 
 - 試作していません。上記の検証、ケースとの干渉チェックは通っています
+- JLCPCB の表面実装部品の回転角は未確認です。注文時の配置プレビューで 1 番ピンの向きを確かめてください（上の「表面実装部品とソケットの実装を JLCPCB に頼む」）
 - USB-C コネクタ（TYPE-C-31-M-12）は 0.5 mm ピッチの SMD で、手はんだでは一番難しい部品です（Lumberjack と同じ部品）
 - ケースの USB-C 部はコネクタの 3D モデルがないため、寸法計算だけで確認しています
 - ホットスワップソケットのフットプリントは keyswitch-kicad-library と同寸で、JLCPCB の部品配置とも一致しましたが、実物のソケットでの勘合は未確認です

@@ -28,14 +28,26 @@ SLOT_PITCH = 0.8
 BUS0 = 124.0          # first B.Cu column bus below bottom row
 FAN_X0 = 123.2        # first fan-out turn column (left side; mirrored on the right)
 FAN_PITCH = 0.7
-REF_POS = {"LED1": (152.0, 118.0, 1.0), "LED2": (165.6, 118.0, 1.0), "C4": (157.5, 121.6, 1.0)}
+REF_POS = {"Y1": (153.84, 88.0, 1.0), "U3": (143.3, 88.9, 1.0), "C6": (141.0, 95.6, 1.0), "C7": (141.0, 92.8, 1.0), "LED1": (156.6, 108.2, 1.0), "LED2": (159.0, 116.3, 1.0)}
 BUS_PITCH = 1.0
-# names KiCad gives to no-connect pins in the schematic
-NC_NETS = {("U1", "21"): "unconnected-(U1-AREF-Pad21)",
-           ("U1", "23"): "unconnected-(U1-PC0-Pad23)",
-           ("U1", "25"): "unconnected-(U1-PC2-Pad25)",
-           ("J1", "A8"): "unconnected-(J1-SBU1-PadA8)",
-           ("J1", "B8"): "unconnected-(J1-SBU2-PadB8)"}
+CLI = os.environ.get("KICAD_CLI", "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli")
+
+
+def nc_nets():
+    """Names KiCad gives to no-connect pins, read from the schematic netlist."""
+    import subprocess
+    import tempfile
+    import sexpr
+    out = os.path.join(tempfile.mkdtemp(), "n.net")
+    subprocess.run([CLI, "sch", "export", "netlist", "--format", "kicadsexpr", "-o", out,
+                    os.path.join(ROOT, f"{design.PROJECT}.kicad_sch")], check=True, capture_output=True)
+    nets = {}
+    for n in sexpr.parse(open(out).read()).child("nets").children("net"):
+        name = n.child("name").items[1]
+        if name.startswith("unconnected-"):
+            for node in n.children("node"):
+                nets[(node.child("ref").items[1], node.child("pin").items[1])] = name
+    return nets
 
 
 def P(x, y):
@@ -45,12 +57,13 @@ def P(x, y):
 def main():
     if os.path.exists(OUT):
         os.remove(OUT)
+    NC_NETS = nc_nets()
     board = pcbnew.NewBoard(OUT)
     nets = {}
 
     def net(name):
         # label nets live under the root sheet ("/COL0"); power and auto nets do not
-        if name not in ("+5V", "GND") and not name.startswith(("Net-(", "/", "unconnected-(")):
+        if name not in ("+5V", "+3V3", "GND") and not name.startswith(("Net-(", "/", "unconnected-(")):
             name = "/" + name
         if name not in nets:
             n = pcbnew.NETINFO_ITEM(board, name)
@@ -84,6 +97,8 @@ def main():
                 pad.SetNet(net(n))
         if p["ref"] == "J1":
             fp.SetLocalClearance(pcbnew.FromMM(0.15))   # 0.5 mm pitch USB-C pads
+        if p["ref"] in ("J1", "U4"):                  # fine-pitch back-side pads: solid to the GND pour
+            fp.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
         if p["ref"].startswith(("MX", "H")):
             fp.SetLocked(True)
         if p["ref"].startswith("MX"):
@@ -96,6 +111,18 @@ def main():
             for item in fp.GraphicalItems():
                 if item.GetClass() == "PCB_TEXT" and item.GetText() == "K":
                     item.SetLayer(pcbnew.F_Fab)
+        if p.get("lcsc") and fp.GetAttributes() & pcbnew.FP_SMD and p["ref"][0] in "CR":
+            fp.Reference().SetVisible(False)          # 0402 parts: no room for a designator
+        if p["ref"].startswith("D") and p["ref"][1:].isdigit():
+            a_, b_ = fp.FindPadByNumber("1").GetPosition(), fp.FindPadByNumber("2").GetPosition()
+            fp.Reference().SetPosition(pcbnew.VECTOR2I((a_.x + b_.x) // 2, (a_.y + b_.y) // 2))
+            fp.Reference().SetTextAngleDegrees(0)     # on the diode body, clear of the zigzag pads
+        if p["footprint"] == design.FP_R:            # axial resistors: designator on the body
+            a_, b_ = fp.FindPadByNumber("1").GetPosition(), fp.FindPadByNumber("2").GetPosition()
+            fp.Reference().SetPosition(pcbnew.VECTOR2I((a_.x + b_.x) // 2, (a_.y + b_.y) // 2))
+            fp.Reference().SetTextAngleDegrees(90 if abs(a_.x - b_.x) < abs(a_.y - b_.y) else 0)
+        if p["ref"] in ("U1", "U2", "U4"):            # SMD ICs carry their own marking
+            fp.Reference().SetVisible(False)
         if p["ref"] in REF_POS:
             rx, ry, rsize = REF_POS[p["ref"]]
             fp.Reference().SetPosition(P(rx, ry))
@@ -144,11 +171,9 @@ def main():
             t.SetMirrored(True)
         board.Add(t)
 
-    text("eugeo", design.CENTER_X, 65.3, size=1.5, thick=0.25)
-    text("RST  SCK  MISO", 146.6, 78.3, size=1.0, thick=0.15)
-    text("GND  MOSI  VCC", 146.6, 84.9, size=1.0, thick=0.15)
-    text("RESET", 151.4, 72.35, size=1.0, rot=90, thick=0.15)
-    text("BOOT", 151.4, 103.9, size=1.0, rot=90, thick=0.15)
+    text("eugeo", design.CENTER_X, 63.4, size=1.2, thick=0.2)
+    text("RESET", 145.25, 106.75, size=1.0, thick=0.15)
+    text("BOOT", 145.25, 116.75, size=1.0, thick=0.15)
     text(f"eugeo rev{design.REV}  6x4x2 hot-swap", design.CENTER_X, 126.2, pcbnew.B_SilkS, 1.0)
     text("based on Lumberjack by peej (MIT)", design.CENTER_X, 128.2, pcbnew.B_SilkS, 1.0)
 
@@ -181,7 +206,6 @@ def main():
     for r_ in range(design.ROWS):
         cy = design.KEY_Y[r_]
         for side in (0, 1):
-            ax = design.DIODE_ANODE_X[side]
             sign = 1 if side == 0 else -1            # direction towards the centre
             x0 = FAN_X0 if side == 0 else 2 * design.CENTER_X - FAN_X0
             items = []
@@ -198,6 +222,7 @@ def main():
             for rank, it in enumerate(reversed(down)):        # bottom track turns first
                 turn[it[0]] = x0 + sign * FAN_PITCH * rank
             for i, c, n, slot, dy in items:
+                ax = design.diode_x(side, 6 * r_ + i)[0]
                 cx = design.KEY_X[c]
                 net_ = design.key_net(n)
                 pad1 = (cx + 5.842, cy - 5.08)
@@ -237,7 +262,7 @@ def main():
     track((X(-0.75), jy), (X(-0.75), 58.8), pcbnew.B_Cu, "CONN_D-")
     track((X(0.25), jy), (X(0.25), 58.8), pcbnew.B_Cu, "CONN_D-")
     track((X(-0.75), 58.8), (158.6, 58.8), pcbnew.B_Cu, "CONN_D-")
-    track((158.6, 58.8), (158.6, 59.8), pcbnew.B_Cu, "CONN_D-")
+    track((158.6, 58.8), (158.6, 59.5), pcbnew.B_Cu, "CONN_D-")
     # D+: A6 + B6 joined below the pads
     track((X(-0.254), jy), (X(-0.254), 63.0), pcbnew.B_Cu, "CONN_D+")
     track((X(0.75), jy), (X(0.75), 63.0), pcbnew.B_Cu, "CONN_D+")
@@ -249,11 +274,181 @@ def main():
         via((X(vx), 63.25), "VBUS", (0.8, 0.4))
     track((X(-3.1), 63.25), (X(3.1), 63.25), pcbnew.F_Cu, "VBUS", 0.4)
 
-    # cathodes of each row group are stacked: tie them with one vertical F.Cu track
-    for x in design.DIODE_CATHODE_X:
+    # ---- RP2040 block (hand-routed; Freerouting only joins the escapes) -----
+    fps = {f.GetReference(): f for f in board.GetFootprints()}
+
+    def pad(ref, num):
+        q = fps[ref].FindPadByNumber(str(num)).GetPosition()
+        return round(pcbnew.ToMM(q.x), 4), round(pcbnew.ToMM(q.y), 4)
+
+    def path(pts, n, layer=pcbnew.F_Cu, w=0.2):
+        for a_, b_ in zip(pts, pts[1:]):
+            if abs(a_[0] - b_[0]) + abs(a_[1] - b_[1]) > 1e-3:
+                track(a_, b_, layer, n, w)
+
+    F, B = pcbnew.F_Cu, pcbnew.B_Cu
+    up = lambda k: pad("U1", k)
+
+    # +3V3 ring inside the pin ring (0.3-0.4 mm from the pin ends, clear of the
+    # exposed pad): ties IOVDD 1/10/33/42/49, USB_VDD 48, VREG_VIN 44, ADC_AVDD 43.
+    RL, RR, RT, RB = 149.8, 155.0, 74.5, 79.3
+    path([(RL, RB), (RL, RT), (RR, RT), (RR, 78.0)], "+3V3")
+    for k in (1, 10):
+        path([up(k), (RL, up(k)[1])], "+3V3")
+    for k in (33, 42):
+        path([up(k), (RR, up(k)[1])], "+3V3")
+    for k in (43, 44, 48, 49):
+        path([up(k), (up(k)[0], RT)], "+3V3")
+    # pin 22 (IOVDD) has no room on the ring: via under the pin, joined on the back
+    va, vb, vc = (150.4, RB), (152.2, RB), (153.6, RB)
+    path([(RL, RB), va], "+3V3")
+    via(va, "+3V3")
+    path([up(22), (up(22)[0], RB), vb], "+3V3")
+    via(vb, "+3V3")
+    track(va, vb, B, "+3V3", 0.25)
+    # TESTEN (19) straight into the exposed pad; exposed pad -> 4 vias to the GND pour
+    path([up(19), (up(19)[0], 78.6)], "GND", w=0.15)
+    for dx in (-0.8, 0.8):
+        for dy in (-0.8, 0.8):
+            via((152.4 + dx, 77.0 + dy), "GND")
+
+    # +1V1: VREG_VOUT 45 and DVDD 50 on the top edge, DVDD 23 at the bottom.
+    v50, v45 = (152.75, 72.0), (154.45, 72.15)
+    path([up(50), (up(50)[0], 72.55), v50], "+1V1")
+    path([up(45), (up(45)[0], 72.55), (154.45, 72.3), v45], "+1V1")
+    path([up(23), (up(23)[0], RB), vc], "+1V1")
+    for v in (v50, v45, vc):
+        via(v, "+1V1")
+    path([v50, v45], "+1V1", B, 0.25)
+    path([v50, (152.4, 72.35), (152.4, 78.6), (152.9, 78.6), vc], "+1V1", B, 0.25)
+    # top-edge decoupling: C20 (DVDD 50) and C18 (VREG_VOUT 45) with their GND vias
+    for ref, v_, g in (("C20", v50, (152.75, 69.1)), ("C18", v45, (154.45, 69.2))):
+        path([v_, pad(ref, 1)], "+1V1")
+        path([pad(ref, 2), g], "GND")
+        via(g, "GND")
+    # back-side C12 (pin 22) / C13 (pin 23)
+    path([vb, pad("C12", 1)], "+3V3", B, 0.25)
+    path([vc, pad("C13", 1)], "+1V1", B, 0.25)
+
+    # +3V3 decoupling on the outer pin ends
+    path([up(1), pad("C10", 1)], "+3V3")
+    path([up(10), pad("C11", 1)], "+3V3")
+    path([up(33), pad("C14", 1)], "+3V3")
+    path([up(42), pad("C15", 1)], "+3V3")
+    path([up(43), (155.4, 72.725), pad("C17", 1)], "+3V3")
+    g10, g11, g14, g17 = (146.64, 73.5), (145.7, 78.0), (159.1, 78.0), (158.0, 72.9)
+    path([pad("C10", 2), g10], "GND")
+    path([pad("C11", 2), g11], "GND")
+    path([pad("C14", 2), g14], "GND")
+    path([pad("C17", 2), g17], "GND")
+    path([pad("C15", 2), g17], "GND")
+    for g in (g10, g11, g14, g17):
+        via(g, "GND")
+
+    # QSPI flash (U2, rotated 180 to the upper left): pins 1-3 face the RP2040,
+    # pins 5-7 come round over the top of the package.
+    path([up(56), (149.8, 71.905), (149.4, 71.505), pad("U2", 1)], "QSPI_SS")
+    path([up(55), (150.2, 70.635), (149.8, 70.235), pad("U2", 2)], "QSPI_SD1")
+    path([up(54), (150.6, 69.365), (150.2, 68.965), pad("U2", 3)], "QSPI_SD2")
+    gf = (150.35, 67.695)
+    path([pad("U2", 4), gf], "GND")
+    via(gf, "GND")
+    x5, y5 = pad("U2", 5)
+    path([up(53), (151.0, 67.0), (150.6, 66.6), (x5, 66.6), (x5, y5)], "QSPI_SD0")
+    x6, y6 = pad("U2", 6)
+    path([up(52), (151.4, 66.6), (151.0, 66.2), (140.5, 66.2), (140.5, y6), (x6, y6)], "QSPI_SCLK")
+    x7, y7 = pad("U2", 7)
+    path([up(51), (151.8, 66.2), (151.4, 65.8), (140.1, 65.8), (140.1, y7), (x7, y7)], "QSPI_SD3")
+    # flash VCC: C22 under pin 8, fed from pin 1's capacitor C10
+    path([pad("U2", 8), pad("C22", 1), (pad("C10", 1)[0], pad("C22", 1)[1]), pad("C10", 1)], "+3V3")
+    g22 = (140.75, 73.68)
+    path([pad("C22", 2), g22], "GND")
+    via(g22, "GND")
+
+    # USB: D+ / D- straight up between C20 and C18, then diagonally to R2 / R3
+    r2, r3 = pad("R2", 2), pad("R3", 2)
+    path([up(47), (153.4, 67.8), (156.0, 67.8), (165.6, 58.2), r2], "USB_D+")
+    path([up(46), (153.8, 68.4), (156.0, 68.4), (224.4 - r3[1], r3[1]), r3], "USB_D-")
+
+    # crystal: XIN straight down, XOUT through R11
+    xi = pad("Y1", 1)
+    path([up(20), (151.8, xi[1] - 0.8), (xi[0], xi[1])], "XIN")
+    path([up(21), (152.2, 81.4), (152.6, 81.8), pad("R11", 1)], "XOUT")
+    xo = pad("Y1", 2)
+    path([pad("R11", 2), (152.6, 84.2), (xo[0], 84.2 + xo[0] - 152.6), xo], "XOUT_X")
+
+    # signal escapes: left / right rows + columns
+    # rows: out sideways, then down a channel next to the diode stack to the first
+    # cathode of their zigzag that faces the MCU
+    for side in (0, 1):
+        for r_ in range(4):
+            k = (5, 7, 13, 19)[r_]                      # odd k: the cathode stepped towards the centre
+            cx, cy = design.diode_x(side, k)[1], design.diode_stack_y(k)
+            pin = up((3, 5, 7, 8)[r_] if side == 0 else (40, 38, 36, 35)[r_])
+            sgn = 1 if side == 0 else -1
+            if r_ == 0:
+                path([pin, (cx + sgn * 1.7, pin[1]), (cx, cy)], f"ROW{r_ + 4 * side}")
+            else:
+                xv = design.CENTER_X - sgn * (11.6 - 0.4 * (r_ - 1))   # 140.8 / 141.2 / 141.6
+                path([pin, (xv, pin[1]), (xv, cy), (cx, cy)], f"ROW{r_ + 4 * side}")
+
+    # the three columns spread from 0.4 to 0.8 mm pitch so vias fit
+    netof = lambda k: fps["U1"].FindPadByNumber(str(k)).GetNetname().lstrip("/")
+    for side, x_end, cols_ in ((-1, 145.0, (12, 13, 14)), (1, 159.8, (31, 30, 29))):
+        x0 = up(cols_[0])[0] + side * 0.75          # just past the pad tips
+        for i, k in enumerate(cols_):
+            y0 = up(k)[1]
+            dy = 0.4 * i                              # 78.8 / 79.2 / 79.6 -> 78.8 / 79.6 / 80.4
+            bend = x0 + side * 0.4 * (2 - i)
+            path([up(k), (bend, y0), (bend + side * dy, y0 + dy), (x_end, y0 + dy)], netof(k))
+            # via at the end, back side down a channel beside the diode stack, top side
+            # again past the other column buses, via onto its own bus
+            n = netof(k)
+            ye = y0 + dy
+            xv = design.CENTER_X + side * (12.8 - 0.6 * i)        # 139.6 / 140.2 / 140.8
+            yv = 116.0 - i
+            yb = BUS0 + BUS_PITCH * (5 - int(n[3:]))
+            via((x_end, ye), n)
+            path([(x_end, ye), (xv, ye + abs(x_end - xv)), (xv, yv)], n, B)
+            via((xv, yv), n)
+            path([(xv, yv), (xv, yb)], n)
+            via((xv, yb), n)
+    # bottom right: LED2 / LED1 down the right of the crystal to their resistors,
+    # RUN through a via and along the back to R9 and the RESET button
+    r8, r7 = pad("R8", 1), pad("R7", 1)
+    path([up(28), (up(28)[0], 81.3), (r8[0], 81.3), r8], "LED2")
+    path([up(27), (up(27)[0], 81.7), (r7[0], 81.7), r7], "LED1")
+    path([pad("R8", 2), pad("LED2", 2)], "LED2_A")
+    path([pad("R7", 2), pad("LED1", 2)], "LED1_A")
+    vr = (158.8, 83.2)
+    path([up(26), (up(26)[0], 82.1), (vr[0], 82.1), vr], "RUN")
+    via(vr, "RUN")
+    r9, s1 = pad("R9", 2), [q for q in (fps["SW1"].Pads()) if q.GetNetname().lstrip("/") == "RUN"]
+    s1 = min(((pcbnew.ToMM(q.GetPosition().x), pcbnew.ToMM(q.GetPosition().y)) for q in s1), key=lambda t: t[1])
+    path([vr, (vr[0], 94.0), (r9[0] + 0.7, 94.0), (r9[0], 94.7), r9], "RUN", B)
+    path([r9, (r9[0] - 1.2, 96.8), (s1[0], 96.8), s1], "RUN", B)
+    # QSPI_SS also feeds the BOOT button (R10): via inside the flash footprint
+    vs = (147.3, 71.5)
+    path([pad("U2", 1), vs], "QSPI_SS")
+    via(vs, "QSPI_SS")
+
+    # GND of the regulator corner: tie the THT grounds together on top
+    path([pad("U3", 1), pad("C7", 2), pad("C6", 2), (pad("SW1", 2)[0], pad("C6", 2)[1] + 1.6), pad("SW1", 2)],
+         "GND", F, 0.4)
+
+    # +3V3 feed: ring -> back side -> via -> MCP1700 output
+    vd = (147.6, 82.8)
+    path([va, (147.6, 82.1), vd], "+3V3", B, 0.25)
+    via(vd, "+3V3")
+    o3 = pad("U3", 3)
+    path([vd, (o3[0], vd[1] + (vd[0] - o3[0])), o3], "+3V3", F, 0.25)
+
+    # cathodes of each row group: a zigzag F.Cu track through the six cathode pads
+    for side in (0, 1):
         for r_ in range(design.ROWS):
-            ya, yb = design.diode_stack_y(6 * r_), design.diode_stack_y(6 * r_ + 5)
-            track((x, ya), (x, yb), pcbnew.F_Cu, f"ROW{r_ if x < design.CENTER_X else r_ + 4}")
+            pts = [(design.diode_x(side, k)[1], design.diode_stack_y(k)) for k in range(6 * r_, 6 * r_ + 6)]
+            for a_, b_ in zip(pts, pts[1:]):
+                track(a_, b_, pcbnew.F_Cu, f"ROW{r_ + 4 * side}")
 
     board.BuildConnectivity()
     pcbnew.SaveBoard(OUT, board)

@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 NS = uuid.UUID("6f1c3e1e-6a8b-4c55-9d0e-2f6b8e0e9a10")
 ROOT_UUID = str(uuid.uuid5(NS, "root"))
-POWER = {"+5V": "eugeo:+5V", "GND": "eugeo:GND"}
+POWER = {"+5V": "eugeo:+5V", "+3V3": "eugeo:+3V3", "GND": "eugeo:GND"}
 G = 2.54
 
 
@@ -187,43 +187,43 @@ def main():
         sh.label(d["pins"]["1"], x - 10.16, y, 180)
 
     # --- MCU ---------------------------------------------------------------
-    sh.text("MCU", 25.4, 104.14, 2)
-    sh.symbol(parts["U1"]["symbol"], "U1", parts["U1"]["value"], 63.5, 157.48, 0,
-              parts["U1"]["footprint"], ref_at=(52.07, 116.84), val_at=(68.58, 116.84),
-              pins=[str(i) for i in range(1, 29)])
-    sh.tie_pins(parts["U1"], 63.5, 157.48)
-
-    # --- passives & connectors in a grid --------------------------------
-    grid = [
-        ["Y1", "C1", "C2", "SW1", "R4", "SW2"],
-        ["C3", "C4", "C5", "R7", "LED1", "R8", "LED2"],
-        ["F1", "R1", "R2", "R3", "D49", "D50", "R5", "R6"],
-    ]
-    sh.text("Crystal / reset / bootloader", 114.3, 104.14, 2)
-    sh.text("Power / LEDs", 114.3, 142.24, 2)
-    sh.text("USB (V-USB)", 114.3, 180.34, 2)
-    rows_y = [124.46, 162.56, 200.66]
-    for gi, row in enumerate(grid):
-        for i, ref in enumerate(row):
-            p = parts[ref]
-            x = 124.46 + 22.86 * i
-            y = rows_y[gi]
-            pin_names = [n for n, *_ in PINS[p["symbol"]]]
-            sh.symbol(p["symbol"], ref, p["value"], x, y, 0, p["footprint"],
-                      ref_at=(x + 5.08, y - 1.27), val_at=(x + 5.08, y + 1.27), pins=sorted(set(pin_names)))
-            sh.tie_pins(p, x, y)
-
-    p = parts["J2"]
-    sh.symbol(p["symbol"], "J2", p["value"], 297.18, 124.46, 0, p["footprint"],
-              ref_at=(298.45, 116.84), val_at=(298.45, 132.08), pins=[str(i) for i in range(1, 7)])
-    sh.tie_pins(p, 297.18, 124.46, stub=5.08)
-    sh.text("ISP: 1 GND  2 RST  3 MOSI  4 SCK  5 VCC  6 MISO", 274.32, 139.7)
+    sh.text("MCU (RP2040)", 25.4, 104.14, 2)
+    u = parts["U1"]
+    sh.symbol(u["symbol"], "U1", u["value"], 63.5, 160.02, 0, u["footprint"],
+              ref_at=(48.26, 109.22), val_at=(68.58, 109.22),
+              pins=sorted(set(n for n, *_ in PINS[u["symbol"]])))
+    sh.tie_pins(u, 63.5, 160.02)
 
     p = parts["J1"]
-    sh.symbol(p["symbol"], "J1", p["value"], 50.8, 236.22, 0, p["footprint"],
-              ref_at=(40.64, 213.36), val_at=(66.04, 213.36),
+    sh.text("USB-C", 25.4, 226.06, 2)
+    sh.symbol(p["symbol"], "J1", p["value"], 50.8, 254.0, 0, p["footprint"],
+              ref_at=(40.64, 231.14), val_at=(66.04, 231.14),
               pins=sorted(set(n for n, *_ in PINS[p["symbol"]])))
-    sh.tie_pins(p, 50.8, 236.22)
+    sh.tie_pins(p, 50.8, 254.0)
+
+    # --- flash, regulator, ESD --------------------------------------------
+    sh.text("Flash / power / USB ESD", 114.3, 104.14, 2)
+    for i, ref in enumerate(["U2", "U3", "U4"]):
+        p = parts[ref]
+        x, y = 124.46 + 40.64 * i, 129.54
+        sh.symbol(p["symbol"], ref, p["value"], x, y, 0, p["footprint"],
+                  ref_at=(x, y - 16.51), val_at=(x, y + 16.51),
+                  pins=sorted(set(n for n, *_ in PINS[p["symbol"]])))
+        sh.tie_pins(p, x, y)
+
+    # --- passives, crystal, buttons, LEDs ------------------------------------
+    sh.text("Decoupling / clock / reset / boot / LEDs / USB", 114.3, 154.94, 2)
+    big = {"U1", "U2", "U3", "U4", "J1"}
+    small = [r for r in parts if r not in big and not r.startswith(("MX", "H"))
+             and not (r.startswith("D") and r[1:].isdigit())]
+    for i, ref in enumerate(small):
+        p = parts[ref]
+        x = 124.46 + 22.86 * (i % 9)
+        y = 165.1 + 22.86 * (i // 9)
+        pin_names = [n for n, *_ in PINS[p["symbol"]]]
+        sh.symbol(p["symbol"], ref, p["value"], x, y, 0, p["footprint"],
+                  ref_at=(x + 5.08, y - 1.27), val_at=(x + 5.08, y + 1.27), pins=sorted(set(pin_names)))
+        sh.tie_pins(p, x, y)
 
     # --- mounting holes -------------------------------------------------
     sh.text("Mounting holes (M2): H1-H8 case / plate, H9-H12 centre cover", 332.74, 104.14, 2)
@@ -247,8 +247,8 @@ def main():
     sh.wire(381.0, 180.34, 381.0, 185.42)
     sh.label("VBUS", 381.0, 185.42, 270)
 
-    sh.text("eugeo: 6x4x2 ortholinear, through-hole, Kailh MX hot-swap. "
-            "Derived from Lumberjack by Paul James (peej), MIT License.", 25.4, 281.94)
+    sh.text("eugeo: 6x4x2 ortholinear, RP2040, through-hole on show, Kailh MX hot-swap. "
+            "Derived from Lumberjack by Paul James (peej), MIT License.", 114.3, 284.48)
 
     used = set()
     for it in sh.items:

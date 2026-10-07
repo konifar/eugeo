@@ -47,7 +47,7 @@ BOSS_D = design.CASE_BOSS_D
 SCREW_D = 2.4            # M2 clearance
 HEAD_D = 4.4             # M2 pan head counterbore
 HEAD_SEAT = -6.4         # screw head seat: M2x10 then engages 2 mm of the 3.5 mm standoff
-PILLARS = [(152.4, 68.0), (152.4, 125.5)]   # extra PCB supports (no screw), near the USB-C
+PILLARS = design.PILLARS
 USB_W, USB_H = 14.0, 8.5  # room for the plug overmold
 USB_Z = -1.63             # receptacle centre (TYPE-C-31-M-12 on the back side)
 

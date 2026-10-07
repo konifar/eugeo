@@ -17,29 +17,29 @@
   },
   "matrix_pins": {
     "cols": [
-      "B4",
-      "B3",
-      "B2",
-      "B0",
-      "D7",
-      "D6"
+      "GP9",
+      "GP10",
+      "GP11",
+      "GP20",
+      "GP19",
+      "GP18"
     ],
     "rows": [
-      "D0",
-      "D1",
-      "D4",
-      "D5",
-      "C5",
-      "C1",
-      "B5",
-      "B1"
+      "GP1",
+      "GP3",
+      "GP5",
+      "GP6",
+      "GP28",
+      "GP26",
+      "GP24",
+      "GP23"
     ]
   },
   "diode_direction": "COL2ROW",
-  "processor": "atmega328p",
-  "bootloader": "usbasploader",
+  "processor": "RP2040",
+  "bootloader": "rp2040",
   "indicators": {
-    "caps_lock": "C4"
+    "caps_lock": "GP16"
   },
   "community_layouts": [
     "ortho_4x12"

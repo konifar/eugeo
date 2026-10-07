@@ -225,7 +225,22 @@ def main(base):
         r_ = cpl.get(ref)
         if not r_ or abs(float(r_["Mid X"][:-2]) - cx) > 0.01 or abs(float(r_["Mid Y"][:-2]) - cy) > 0.01 or r_["Layer"] != "Bottom":
             off.append(ref)
-    check(len(cpl) == 48 and not off, f"JLCPCB CPL: 48 sockets at the pad centres on Bottom {off[:5]}")
+    check(sum(1 for r_ in cpl if r_.startswith("MX")) == 48 and not off,
+          f"JLCPCB CPL: 48 sockets at the pad centres on Bottom {off[:5]}")
+    lcsc = {p["ref"]: p["lcsc"] for p in design.parts() if p.get("lcsc")}
+    bom = {}
+    for r_ in csv.DictReader(open(os.path.join(ROOT, "jlcpcb", "eugeo-bom.csv"))):
+        for ref in r_["Designator"].split(","):
+            bom[ref] = r_["LCSC Part #"]
+    off = []
+    for ref, part in lcsc.items():
+        fp, r_ = fps[ref], cpl.get(ref)
+        side = "Bottom" if fp.IsFlipped() else "Top"
+        if (not r_ or bom.get(ref) != part or r_["Layer"] != side
+                or abs(float(r_["Mid X"][:-2]) - mm(fp.GetPosition().x)) > 0.01
+                or abs(float(r_["Mid Y"][:-2]) + mm(fp.GetPosition().y)) > 0.01):
+            off.append(ref)
+    check(len(lcsc) and not off, f"JLCPCB BOM/CPL: {len(lcsc)} SMD parts with LCSC numbers at the footprint positions {off[:5]}")
 
     def circles(path, shift=(0, 0)):
         b = pcbnew.LoadBoard(path)
