@@ -2,7 +2,7 @@
 
     kicad-cli pcb export glb --subst-models -o /tmp/eugeo-pcb.glb eugeo.kicad_pcb
     Blender -b -P scripts/render_case.py -- case/eugeo-case.stl /tmp/eugeo-pcb.glb out.png asm iso [case/eugeo-cover.stl]
-(mode: case | asm, view: iso | front | top | side | back | bottom | badge | back34; extra STLs render as clear acrylic)
+(mode: case | asm, view: iso | hero | top | profile | back34 | badge | bottom; extra STLs as path[:acrylic|plate|keycap])
 """
 import bpy, sys, math, mathutils
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -33,15 +33,24 @@ if mode != "case":
     print("board", board.name, max(p.x for p in bb)-min(p.x for p in bb), max(p.y for p in bb)-min(p.y for p in bb), zmax-zmin)
     for r in root:
         r.location.x -= cx; r.location.y -= cy; r.location.z -= zmin
+MATERIALS = {   # name: (base colour, roughness, alpha)
+    "acrylic": ((0.9, 0.95, 1.0, 1), 0.05, 0.35),
+    "plate": ((0.06, 0.06, 0.07, 1), 0.5, 1.0),
+    "keycap": ((0.93, 0.92, 0.89, 1), 0.6, 1.0),
+    "switch": ((0.2, 0.2, 0.22, 1), 0.4, 1.0),
+}
 for extra in argv[5:]:
-    bpy.ops.wm.stl_import(filepath=extra)
+    path, _, kind = extra.partition(":")
+    bpy.ops.wm.stl_import(filepath=path)
     o = bpy.context.selected_objects[0]
-    m = bpy.data.materials.new("acrylic"); m.use_nodes = True
+    color, rough, alpha = MATERIALS[kind or "acrylic"]
+    m = bpy.data.materials.new(kind or "acrylic"); m.use_nodes = True
     bs = [n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"][0]
-    bs.inputs["Base Color"].default_value = (0.9, 0.95, 1.0, 1)
-    bs.inputs["Roughness"].default_value = 0.05
-    bs.inputs["Alpha"].default_value = 0.35
-    m.surface_render_method = "BLENDED" if hasattr(m, "surface_render_method") else m.blend_method
+    bs.inputs["Base Color"].default_value = color
+    bs.inputs["Roughness"].default_value = rough
+    bs.inputs["Alpha"].default_value = alpha
+    if alpha < 1 and hasattr(m, "surface_render_method"):
+        m.surface_render_method = "BLENDED"
     o.data.materials.append(m)
 world = bpy.data.worlds.new("w"); sc.world = world; world.use_nodes = True
 [n for n in world.node_tree.nodes if n.type == "BACKGROUND"][0].inputs[0].default_value = (0.93, 0.94, 0.96, 1)
@@ -54,6 +63,9 @@ cam = bpy.data.cameras.new("cam"); cam.type = "ORTHO"; cam.ortho_scale = 330; ca
 co = bpy.data.objects.new("cam", cam); sc.collection.objects.link(co); sc.camera = co
 views = {"iso": ((-260, -420, 330), 330), "front": ((0, -800, 120), 320), "top": ((0, 0, 900), 320), "side": ((900, 0, 0), 120), "back": ((60, 700, 160), 330), "bottom": ((0.01, -120, -700), 330)}
 views["badge"] = ((-100, 400, 60), 75, (-100, 46.7, -1.6))
+views["hero"] = ((-300, -460, 300), 345, (0, 0, 0))
+views["profile"] = ((900, 0, 0), 110, (0, 0, -2))
+views["top"] = ((0.01, 0, 900), 320, (0, 0, 0))
 views["back34"] = ((-420, 520, 260), 190, (-40, 30, -5))
 v = views[argv[4] if len(argv) > 4 else "iso"]
 pos, scale = v[0], v[1]

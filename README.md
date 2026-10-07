@@ -3,9 +3,15 @@
 6 キー × 4 行 × 2 ブロック（48 キー）のスルーホール・オーソリニア 40% キーボード PCB です。
 [Lumberjack](https://github.com/peej/lumberjack-keyboard)（Paul James 作、MIT License）をベースに、行を 1 段減らし、Kailh の MX 用ホットスワップソケットに対応させました。
 
+![eugeo](images/eugeo.png)
+
 ![PCB render](images/pcb-render-top.png)
 
-![Case](images/case-assembly.png)
+| 真上 | 背面 | 側面（6°） |
+|---|---|---|
+| ![top](images/eugeo-top.png) | ![back](images/eugeo-back.png) | ![profile](images/eugeo-profile.png) |
+
+組み上がりの画像のスイッチとキーキャップは、大きさと位置の目安として置いた簡易形状です（`scripts/preview_models.py`）。
 
 ## Lumberjack からの変更点
 
