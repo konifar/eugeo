@@ -59,6 +59,19 @@ def main(pcb_step):
     print("board underside clearance to floor:", -C.FLOOR_TOP, "mm; lowest part bottom:",
           round(min(p.bounding_box().min.Z for p in parts), 2), "mm")
 
+    # centre cover: nothing may reach the acrylic, and it must not touch the case
+    cover = C.cover_solid()
+    cbb = cover.bounding_box()
+    under = [p for p in parts if p.bounding_box().max.Z > C.PCB_T and
+             p.bounding_box().min.X < cbb.max.X and p.bounding_box().max.X > cbb.min.X and
+             p.bounding_box().min.Y < cbb.max.Y and p.bounding_box().max.Y > cbb.min.Y]
+    tallest = max(under, key=lambda p: p.bounding_box().max.Z)
+    tb = tallest.bounding_box()
+    print(f"cover underside {cbb.min.Z - C.PCB_T:.1f} mm above PCB; tallest part under it "
+          f"{tb.max.Z - C.PCB_T:.2f} mm at ({tb.center().X:.1f}, {tb.center().Y:.1f})")
+    hits = [p for p in under if vol(cover.intersect(p)) > 1e-3]
+    print("parts touching the cover:", len(hits), "/ cover vs case overlap:", round(vol(case.intersect(cover)), 3), "mm3")
+
 
 if __name__ == "__main__":
     main(sys.argv[1])

@@ -1,8 +1,8 @@
 """Render the case (and optionally the PCB) with Blender.
 
     kicad-cli pcb export glb --subst-models -o /tmp/eugeo-pcb.glb eugeo.kicad_pcb
-    Blender -b -P scripts/render_case.py -- case/eugeo-case.stl /tmp/eugeo-pcb.glb out.png asm iso
-(mode: case | asm, view: iso | front | top | side | back | bottom)
+    Blender -b -P scripts/render_case.py -- case/eugeo-case.stl /tmp/eugeo-pcb.glb out.png asm iso [case/eugeo-cover.stl]
+(mode: case | asm, view: iso | front | top | side | back | bottom | badge | back34; extra STLs render as clear acrylic)
 """
 import bpy, sys, math, mathutils
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -33,6 +33,16 @@ if mode != "case":
     print("board", board.name, max(p.x for p in bb)-min(p.x for p in bb), max(p.y for p in bb)-min(p.y for p in bb), zmax-zmin)
     for r in root:
         r.location.x -= cx; r.location.y -= cy; r.location.z -= zmin
+for extra in argv[5:]:
+    bpy.ops.wm.stl_import(filepath=extra)
+    o = bpy.context.selected_objects[0]
+    m = bpy.data.materials.new("acrylic"); m.use_nodes = True
+    bs = [n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"][0]
+    bs.inputs["Base Color"].default_value = (0.9, 0.95, 1.0, 1)
+    bs.inputs["Roughness"].default_value = 0.05
+    bs.inputs["Alpha"].default_value = 0.35
+    m.surface_render_method = "BLENDED" if hasattr(m, "surface_render_method") else m.blend_method
+    o.data.materials.append(m)
 world = bpy.data.worlds.new("w"); sc.world = world; world.use_nodes = True
 [n for n in world.node_tree.nodes if n.type == "BACKGROUND"][0].inputs[0].default_value = (0.93, 0.94, 0.96, 1)
 [n for n in world.node_tree.nodes if n.type == "BACKGROUND"][0].inputs[1].default_value = 0.8

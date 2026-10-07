@@ -92,6 +92,15 @@ def main():
     pcbnew.SaveBoard(path, b)
     print("wrote", path)
 
+    # centre cover: 2 mm acrylic on 10 mm standoffs (Lumberjack style)
+    path, b = new_board("eugeo-cover")
+    (cx1, cx2), (cy1, cy2) = design.COVER_X, design.COVER_Y
+    rounded_rect(b, cx1, cy1, cx2, cy2, design.COVER_R)
+    for hx, hy in design.COVER_HOLES:
+        hole(b, hx, hy)
+    pcbnew.SaveBoard(path, b)
+    print("wrote", path)
+
     # bottom plate: full outline + 8 holes
     path, b = new_board("eugeo-bottom")
     rounded_rect(b, x1, y1, x2, y2, R)

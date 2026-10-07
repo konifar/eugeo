@@ -161,6 +161,9 @@ def parts():
              (200.025, 73.819), (200.025, 111.919), (276.225, 73.819), (276.225, 111.919)]
     for i, (x, y) in enumerate(holes, 1):
         add(f"H{i}", "M2", "eugeo:MountingHole", FP_HOLE, {}, (x, y, 0, "F"))
+    # centre component cover (as on Lumberjack): 4 standoff holes around the MCU area
+    for i, (x, y) in enumerate(COVER_HOLES, len(holes) + 1):
+        add(f"H{i}", "M2", "eugeo:MountingHole", FP_HOLE, {}, (x, y, 0, "F"))
     return P
 
 
@@ -168,6 +171,16 @@ HOLES = [(28.575, 73.819), (28.575, 111.919), (104.775, 73.819), (104.775, 111.9
          (200.025, 73.819), (200.025, 111.919), (276.225, 73.819), (276.225, 111.919)]
 
 POWER_NETS = ("+5V", "GND", "VBUS")
+
+# Centre cover: 2 mm acrylic on 10 mm M2 standoffs over the diodes / MCU / USB area.
+# Top holes sit above the diode stacks, bottom ones inside the stacks because the
+# column buses run along the bottom edge.
+COVER_HOLES = [(131.5, 59.4), (173.3, 59.4), (139.4, 121.6), (165.4, 121.6)]
+COVER_X = (124.3, 180.5)          # clear of the inner keycaps (x <= 123.3 / >= 181.5)
+COVER_Y = (EDGE[1], EDGE[3])
+COVER_R = 3.0
+COVER_T = 2.0
+COVER_STANDOFF = 10.0             # above the PCB top surface
 
 # shared by case.py and build_foams.py
 CASE_CLEARANCE = 1.0     # PCB edge to case pocket wall

@@ -27,6 +27,9 @@
 | screw | 8 | M2×10 なべ | ケース底 → PCB → スペーサー | |
 | screw | 8 | M2×3 | プレート → スペーサー（任意） | |
 | feet | 4〜6 | ゴム足 | ケース底のふちに貼る | |
+| cover | 1 | `plates/eugeo-cover.dxf` | 中央カバー（2mm アクリル、レーザーカット） | |
+| standoff | 4 | M2 10mm メス-メス | PCB - 中央カバー間 | |
+| screw | 8 | M2×4 | 中央カバーのスペーサー固定（PCB 下 4 本 + カバー上 4 本） | |
 | plate foam | 2 | 3.5mm PORON / PE | `foam/eugeo-plate-foam`（任意） | |
 | case foam | 2 | 3mm PORON / EVA | `foam/eugeo-case-foam`（任意） | |
 

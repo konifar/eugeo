@@ -226,9 +226,10 @@ def main():
     sh.tie_pins(p, 50.8, 236.22)
 
     # --- mounting holes -------------------------------------------------
-    sh.text("Mounting holes (M2)", 332.74, 104.14, 2)
-    for i in range(1, 9):
-        p = parts[f"H{i}"]
+    sh.text("Mounting holes (M2): H1-H8 case / plate, H9-H12 centre cover", 332.74, 104.14, 2)
+    holes = sorted((r for r in parts if r.startswith("H")), key=lambda r: int(r[1:]))
+    for i, ref in enumerate(holes, 1):
+        p = parts[ref]
         x = 337.82 + 15.24 * ((i - 1) % 4)
         y = 116.84 + 12.7 * ((i - 1) // 4)
         sh.symbol(p["symbol"], p["ref"], p["value"], x, y, 0, p["footprint"], in_bom=False,

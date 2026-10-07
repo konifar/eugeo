@@ -16,3 +16,4 @@ fab() { # $1 = board file, $2 = output name
 fab eugeo.kicad_pcb eugeo
 fab plates/eugeo-plate.kicad_pcb eugeo-plate
 fab plates/eugeo-bottom.kicad_pcb eugeo-bottom
+fab plates/eugeo-cover.kicad_pcb eugeo-cover

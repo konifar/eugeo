@@ -81,6 +81,28 @@ def wordmark():
     return [Pos(-width / 2, -cap / 2) * l for l in letters], width
 
 
+def cover_solid():
+    """Centre cover in case coordinates (bottom face at PCB top + standoff)."""
+    (x1, x2), (y1, y2) = design.COVER_X, design.COVER_Y
+    z0 = PCB_T + design.COVER_STANDOFF
+    with BuildPart() as cover:
+        with BuildSketch(Plane.XY.offset(z0)):
+            with Locations(to_case((x1 + x2) / 2, (y1 + y2) / 2)):
+                RectangleRounded(x2 - x1, y2 - y1, design.COVER_R)
+        extrude(amount=design.COVER_T)
+        with Locations(*[(*to_case(x, y), z0 - 1) for x, y in design.COVER_HOLES]):
+            Cylinder(1.1, design.COVER_T + 2, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
+    return cover.part
+
+
+def export_cover():
+    part = cover_solid()
+    export_step(part, os.path.join(ROOT, "case", "eugeo-cover.step"))
+    export_stl(part, os.path.join(ROOT, "case", "eugeo-cover.stl"), tolerance=0.02, angular_tolerance=0.1)
+    bb = part.bounding_box()
+    print(f"cover {bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm")
+
+
 def main():
     pocket_w, pocket_h = PCB_W + 2 * CLEARANCE, PCB_H + 2 * CLEARANCE
     outer_w, outer_h = pocket_w + 2 * WALL, pocket_h + 2 * WALL
@@ -152,6 +174,7 @@ def main():
 
     part = case.part
     os.makedirs(os.path.join(ROOT, "case"), exist_ok=True)
+    export_cover()
     step = os.path.join(ROOT, "case", "eugeo-case.step")
     stl = os.path.join(ROOT, "case", "eugeo-case.stl")
     export_step(part, step)
