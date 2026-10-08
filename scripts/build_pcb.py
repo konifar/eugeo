@@ -25,12 +25,10 @@ VIA = (0.6, 0.3)
 VIA_DX = 8.0          # via to the right of socket pad 1
 SLOT0 = 3.0           # first F.Cu slot below key centre
 SLOT_PITCH = 0.8
-BUS0 = 124.0          # first B.Cu column bus below bottom row
 FAN_X0 = 123.2        # first fan-out turn column (left side; mirrored on the right)
 FAN_PITCH = 0.7
 REF_POS = {"Y1": (152.4, 88.0, 1.0), "C7": (144.45, 95.4, 1.0), "C1": (149.25, 95.4, 1.0),
            "C2": (155.55, 95.4, 1.0), "C6": (160.35, 95.4, 1.0)}
-BUS_PITCH = 1.0
 CLI = os.environ.get("KICAD_CLI", "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli")
 
 
@@ -247,13 +245,13 @@ def main():
         ys = [cy - 2.54 for cy in design.KEY_Y]
         for a, b in zip(ys, ys[1:]):
             track((x, a), (x, b), pcbnew.B_Cu, n)
-        bus = BUS0 + BUS_PITCH * (5 - k)      # same y for COLk on both halves
+        bus = design.BUS_Y[k]                 # same y for COLk on both halves
         track((x, ys[-1]), (x, bus), pcbnew.B_Cu, n)
         track((x, bus), (design.LEFT_END if c < 6 else design.RIGHT_END, bus), pcbnew.B_Cu, n)
 
     # join the two halves of every column straight across the bottom edge
     for k in range(design.MATRIX_COLS):
-        bus = BUS0 + BUS_PITCH * (5 - k)
+        bus = design.BUS_Y[k]
         track((design.LEFT_END, bus), (design.RIGHT_END, bus), pcbnew.B_Cu, f"COL{k}")
 
     # USB-C: join the duplicated A/B-side pins right at the connector
@@ -408,7 +406,7 @@ def main():
             ye = y0 + dy
             xv = design.CENTER_X + side * (12.8 - 0.6 * i)        # 139.6 / 140.2 / 140.8
             yv = 116.0 - i
-            yb = BUS0 + BUS_PITCH * (5 - int(n[3:]))
+            yb = design.BUS_Y[int(n[3:])]
             via((x_end, ye), n)
             path([(x_end, ye), (xv, ye + abs(x_end - xv)), (xv, yv)], n, B)
             via((xv, yv), n)

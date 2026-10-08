@@ -9,6 +9,7 @@ few large snowflakes that are B.Mask openings on the GND pour (bare, tin-plated 
 under a blue mask reads as ice). Those are only placed where the pour is solid GND
 with no track or via underneath. Re-running replaces the previous artwork.
 """
+import json
 import math
 import os
 import random
@@ -22,6 +23,11 @@ import design  # noqa: E402
 ART = "stump-art"            # group name; the previous run's group is removed first
 CX, CY = design.CENTER_X, (design.EDGE[1] + design.EDGE[3]) / 2
 W_RING, W_BARK, W_FROST = 0.15, 0.2, 0.15
+# logo: Futura "EUGEO" (scripts/logo_eugeo.json) in the free band between key rows 1
+# and 2 of the right-hand block (front view), i.e. on the left when the board is turned over
+LOGO_C = ((design.KEY_X[6] + design.KEY_X[11]) / 2, (design.KEY_Y[1] + design.KEY_Y[2]) / 2 - 1.8)
+LOGO_RULE = (5.0, 20.0)      # gap after the text, rule length
+
 PAD_MARGIN = 0.35            # silk to mask opening
 EDGE_MARGIN = 0.8
 STEP = 0.25                  # clipping resolution (mm)
@@ -117,7 +123,7 @@ def flake(x, y, r, rot=0.0):
 class Keepout:
     """Fast 'is this point too close to an exposed pad / hole / silk text / edge?'."""
 
-    def __init__(self, board, extra=()):
+    def __init__(self, board, extra=(), boxes=()):
         self.cell = 4.0
         self.grid = {}
         self.items = []
@@ -131,6 +137,9 @@ class Keepout:
         for d in board.GetDrawings():
             if d.GetLayer() == pcbnew.B_SilkS and isinstance(d, pcbnew.PCB_TEXT):
                 self.add(d.GetBoundingBox(), ("box", d.GetBoundingBox()))
+        for (x1, y1, x2, y2) in boxes:
+            bb = pcbnew.BOX2I(P(x1, y1), P(x2 - x1, y2 - y1))
+            self.add(bb, ("box", bb))
         for (x, y, r) in extra:
             bb = pcbnew.BOX2I(P(x - r, y - r), P(2 * r, 2 * r))
             self.add(bb, ("circle", (x, y, r)))
@@ -226,6 +235,42 @@ def solid_gnd(board, zone, x, y, r):
     return True
 
 
+def logo(board, group):
+    """Filled Futura letters with a rule and a dot on each side; returns the bounding box."""
+    d = json.load(open(os.path.join(os.path.dirname(__file__), "logo_eugeo.json")))
+    cx, cy = LOGO_C
+    to_board = lambda u, v: (cx - u, cy - v)          # read from the back: mirror x, y up
+    for pts in d["polygons"]:
+        s = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_POLY)
+        s.SetPolyPoints([P(*to_board(u, v)) for u, v in pts])
+        s.SetLayer(pcbnew.B_SilkS)
+        s.SetFilled(True)
+        s.SetWidth(0)
+        board.Add(s)
+        group.AddItem(s)
+    half = d["width"] / 2
+    gap, rule = LOGO_RULE
+    for sx in (-1, 1):
+        a, b = to_board(sx * (half + gap), 0), to_board(sx * (half + gap + rule), 0)
+        line = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_SEGMENT)
+        line.SetStart(P(*a))
+        line.SetEnd(P(*b))
+        line.SetLayer(pcbnew.B_SilkS)
+        line.SetWidth(pcbnew.FromMM(0.3))
+        board.Add(line)
+        group.AddItem(line)
+        dot = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_CIRCLE)
+        dot.SetCenter(P(*b))
+        dot.SetEnd(P(b[0] + 0.7, b[1]))
+        dot.SetLayer(pcbnew.B_SilkS)
+        dot.SetFilled(True)
+        dot.SetWidth(0)
+        board.Add(dot)
+        group.AddItem(dot)
+    w = half + gap + rule + 0.7
+    return (cx - w, cy - d["height"] / 2, cx + w, cy + d["height"] / 2)
+
+
 def main(path):
     board = pcbnew.LoadBoard(path)
     old = [g for g in board.Groups() if g.GetName() == ART]
@@ -255,6 +300,10 @@ def main(path):
         board.Add(s)
         group.AddItem(s)
 
+    # 0. the logo, kept clear of everything else drawn below
+    lx1, ly1, lx2, ly2 = logo(board, group)
+    near_logo = lambda x, y, m: lx1 - m < x < lx2 + m and ly1 - m < y < ly2 + m
+
     # 1. ice: a few big snowflakes of bare copper on the GND pour (B.Mask openings)
     ice = []
     candidates = [(CX + dx, CY + dy) for dx in range(-128, 129, 3) for dy in range(-30, 31, 3)]
@@ -263,7 +312,7 @@ def main(path):
         if len(ice) >= 7:
             break
         r = 2.4
-        if any(math.hypot(x - a, y - b) < 22 for a, b, _ in ice):
+        if any(math.hypot(x - a, y - b) < 22 for a, b, _ in ice) or near_logo(x, y, 6):
             continue
         if solid_gnd(board, zone, x, y, r + 0.4):
             ice.append((x, y, r))
@@ -271,7 +320,8 @@ def main(path):
         for a, b in flake(x, y, r, rng.uniform(0, math.pi / 3)):
             seg(a, b, pcbnew.B_Mask, 0.35)
 
-    keep = Keepout(board, extra=[(x, y, r + 0.6) for x, y, r in ice])
+    keep = Keepout(board, extra=[(x, y, r + 0.6) for x, y, r in ice],
+                   boxes=[(lx1 - 2.0, ly1 - 1.6, lx2 + 2.0, ly2 + 1.6)])
     lines = []                                   # (polyline, width)
 
     # 2. the stump: pith, rings, bark, checks
@@ -299,7 +349,7 @@ def main(path):
     for k in range(70):
         x = rng.uniform(design.EDGE[0] + 4, design.EDGE[2] - 4)
         y = rng.uniform(design.EDGE[1] + 4, design.EDGE[3] - 4)
-        if abs(x - CX) < 1.12 * 37 and abs(y - CY) < 37:
+        if (abs(x - CX) < 1.12 * 37 and abs(y - CY) < 37) or near_logo(x, y, 4):
             continue
         for pts in flake(x, y, rng.uniform(0.9, 2.2), rng.uniform(0, math.pi / 3)):
             lines.append((pts, W_FROST))

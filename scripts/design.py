@@ -225,7 +225,10 @@ POWER_NETS = ("+5V", "+3V3", "GND", "VBUS")
 # extra PCB supports in the case (no screw): below the USB-C, clear of the back-side U4,
 # and at the bottom edge
 PILLARS = [(152.4, 70.2), (152.4, 125.5)]
-COVER_HOLES = [(131.5, 59.4), (173.3, 59.4), (142.6, 118.8), (162.2, 118.8)]
+COVER_HOLES = [(131.5, 59.4), (173.3, 59.4), (131.5, 126.3), (173.3, 126.3)]   # cover corners
+# column buses along the bottom edge (B.Cu), same y on both halves; they split around
+# the lower cover screws: COL5 / COL4 pass above them, COL3..COL0 below
+BUS_Y = {5: 123.85, 4: 124.45, 3: 128.0, 2: 128.6, 1: 129.2, 0: 129.8}
 COVER_X = (124.3, 180.5)          # clear of the inner keycaps (x <= 123.3 / >= 181.5)
 COVER_Y = (EDGE[1], EDGE[3])
 COVER_R = 3.0
