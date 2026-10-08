@@ -3,9 +3,9 @@
 
 #include "quantum.h"
 
-// LED1 (red, GP16) = Caps Lock via keyboard.json indicators.
-// LED2 (green, GP17) = any layer above the base layer is active.
-#define LAYER_LED GP17
+// LED1 (red, GP2) = Caps Lock via keyboard.json indicators.
+// LED2 (green, GP1) = any layer above the base layer is active.
+#define LAYER_LED GP1
 
 void keyboard_pre_init_kb(void) {
     gpio_set_pin_output(LAYER_LED);

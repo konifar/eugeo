@@ -25,8 +25,8 @@
       "GP18"
     ],
     "rows": [
-      "GP1",
       "GP3",
+      "GP4",
       "GP5",
       "GP6",
       "GP28",
@@ -39,7 +39,7 @@
   "processor": "RP2040",
   "bootloader": "rp2040",
   "indicators": {
-    "caps_lock": "GP16"
+    "caps_lock": "GP2"
   },
   "community_layouts": [
     "ortho_4x12"

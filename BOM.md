@@ -2,7 +2,7 @@
 
 | Ref | Qty | Value / Part# | Description | Vendor |
 |---|---|---|---|---|
-| U1, U2, U4, C10-C15, C17, C18, C20, C22, R11 | — | 下表 | 表面実装部品（JLCPCB が実装） | `jlcpcb/eugeo-bom.csv` |
+| U1, U2, U4, C10-C15, C17, C18, C20, C22, R7, R8, R11 | — | 下表 | 表面実装部品（JLCPCB が実装） | `jlcpcb/eugeo-bom.csv` |
 | C1, C2 | 2 | 22pF p2.5mm | セラミックコンデンサ（水晶の負荷容量） | |
 | C3 | 1 | 10uF p1.5mm (φ4mm) | 電解コンデンサ（+5V） | |
 | C6, C7 | 2 | 1uF p2.5mm | 積層セラミックコンデンサ（MCP1700 の入力 / 出力） | |
@@ -14,7 +14,7 @@
 | (switch) | 48 | MX 互換 | キースイッチ（3pin / 5pin どちらも可） | |
 | R2, R3 | 2 | 27Ω | 抵抗（USB D+ / D- 直列） | |
 | R5, R6 | 2 | 5.1kΩ | 抵抗（USB-C CC） | [秋月電子](https://akizukidenshi.com/catalog/g/g108547/) |
-| R7, R8, R10 | 3 | 1kΩ | 抵抗（LED 電流制限、BOOT） | |
+| R10 | 1 | 1kΩ | 抵抗（BOOT） | |
 | R9 | 1 | 10kΩ | 抵抗（RUN プルアップ） | [秋月電子](https://akizukidenshi.com/catalog/g/g108550/) |
 | SW1, SW2 | 2 | 6x6mm | タクトスイッチ（RESET / BOOT） | [Mouser](https://www.mouser.jp/ProductDetail/611-645SL70SMTR92LFS) |
 | U3 | 1 | MCP1700-3302E/TO | 3.3 V LDO（TO-92） | |
@@ -37,7 +37,7 @@
 
 ## 表面実装部品（JLCPCB）
 
-RP2040 まわりの表面実装部品は JLCPCB の PCBA で実装します（`jlcpcb/eugeo-bom.csv` / `eugeo-cpl.csv`）。C12 / C13 / U4 は裏面です。
+RP2040 まわりの表面実装部品は JLCPCB の PCBA で実装します（`jlcpcb/eugeo-bom.csv` / `eugeo-cpl.csv`）。C12 / C13 / R7 / R8 / U4 は裏面です。
 
 | Ref | Qty | Value / Part# | LCSC | Description |
 |---|---|---|---|---|
@@ -46,5 +46,5 @@ RP2040 まわりの表面実装部品は JLCPCB の PCBA で実装します（`j
 | U4 | 1 | USBLC6-2SC6 | C7519 | USB ESD 保護（裏面） |
 | C10-C15, C20, C22 | 8 | 100nF 0402 | C1525 | パスコン |
 | C17, C18 | 2 | 1uF 0402 | C52923 | VREG_VIN / VREG_VOUT |
-| R11 | 1 | 1kΩ 0402 | C11702 | 水晶の直列抵抗 |
+| R7, R8, R11 | 3 | 1kΩ 0402 | C11702 | LED の電流制限（裏面）、水晶の直列抵抗 |
 

@@ -26,17 +26,17 @@ RIGHT_END = 180.5
 #   right block key (r, 6+j) -> ROW r + 4, COL 5 - j   (mirrored, so both halves
 #   share one straight column bus along the bottom edge)
 # Rows and columns leave the RP2040 sideways: left rows/columns on its left pins,
-# right ones on its right pins. The bottom edge carries the crystal, RUN and
-# the two LEDs; the top edge the QSPI flash and USB.
+# right ones on its right pins; the two topmost left GPIOs drive the LEDs. The bottom
+# edge carries the crystal and RUN, the top edge the QSPI flash and USB.
 MATRIX_ROWS = 8
 MATRIX_COLS = 6
 # RP2040 (QFN-56) GPIO -> package pin
 GPIO_PIN = {0: 2, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8, 7: 9, 8: 11, 9: 12, 10: 13, 11: 14,
             12: 15, 13: 16, 14: 17, 15: 18, 16: 27, 17: 28, 18: 29, 19: 30, 20: 31, 21: 32,
             22: 34, 23: 35, 24: 36, 25: 37, 26: 38, 27: 39, 28: 40, 29: 41}
-ROW_GPIO = {0: 1, 1: 3, 2: 5, 3: 6, 4: 28, 5: 26, 6: 24, 7: 23}
+ROW_GPIO = {0: 3, 1: 4, 2: 5, 3: 6, 4: 28, 5: 26, 6: 24, 7: 23}
 COL_GPIO = {0: 9, 1: 10, 2: 11, 3: 20, 4: 19, 5: 18}
-LED_GPIO = {"LED1": 16, "LED2": 17}
+LED_GPIO = {"LED1": 2, "LED2": 1}     # top-left pins, up the back to the LEDs above the flash
 
 FP_MX = "eugeo:MX_Hotswap_Kailh"
 FP_D = "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal"
@@ -180,10 +180,13 @@ def parts():
         {"1": "+5V", "2": "GND"}, (156.25, 118.0, 180, "F"))
 
     # --- status LEDs ------------------------------------------------------
-    add("R7", "1k", "eugeo:R_Small", FP_R, {"1": "LED1", "2": "LED1_A"}, (159.6, 96.4, 270, "F"))
-    add("R8", "1k", "eugeo:R_Small", FP_R, {"1": "LED2", "2": "LED2_A"}, (161.8, 96.4, 270, "F"))
-    add("LED1", "RED", "eugeo:LED_Small", "LED_THT:LED_D3.0mm", {"1": "GND", "2": "LED1_A"}, (159.6, 109.5, 90, "F"))
-    add("LED2", "GREEN", "eugeo:LED_Small", "LED_THT:LED_D3.0mm", {"1": "GND", "2": "LED2_A"}, (161.8, 114.6, 90, "F"))
+    # side by side above the flash; their 1k resistors are 0402 on the back
+    add("R7", "1k", "eugeo:R_Small", "Resistor_SMD:R_0402_1005Metric", {"1": "LED1", "2": "LED1_A"},
+        (144.6, 70.0, 270, "B"), lcsc="C11702")
+    add("R8", "1k", "eugeo:R_Small", "Resistor_SMD:R_0402_1005Metric", {"1": "LED2", "2": "LED2_A"},
+        (145.4, 67.8, 270, "B"), lcsc="C11702")
+    add("LED1", "RED", "eugeo:LED_Small", "LED_THT:LED_D3.0mm", {"1": "GND", "2": "LED1_A"}, (138.6, 62.6, 0, "F"))
+    add("LED2", "GREEN", "eugeo:LED_Small", "LED_THT:LED_D3.0mm", {"1": "GND", "2": "LED2_A"}, (143.6, 62.6, 0, "F"))
 
     # --- USB ------------------------------------------------------------------
     j1 = {"A1": "GND", "A12": "GND", "B1": "GND", "B12": "GND", "S1": "GND",
@@ -195,8 +198,8 @@ def parts():
     add("U4", "USBLC6-2SC6", "eugeo:USBLC6-2SC6", "Package_TO_SOT_SMD:SOT-23-6",
         {"1": "CONN_D+", "6": "CONN_D+", "3": "CONN_D-", "4": "CONN_D-", "5": "VBUS", "2": "GND"},
         (152.4, 65.6, 0, "B"), lcsc="C7519")
-    add("R5", "5.1k", "eugeo:R_Small", FP_R, {"1": "GND", "2": "CC1"}, (138.6, 57.0, 0, "F"))
-    add("R6", "5.1k", "eugeo:R_Small", FP_R, {"1": "GND", "2": "CC2"}, (138.6, 59.5, 0, "F"))
+    add("R5", "5.1k", "eugeo:R_Small", FP_R, {"1": "GND", "2": "CC1"}, (138.6, 56.6, 0, "F"))
+    add("R6", "5.1k", "eugeo:R_Small", FP_R, {"1": "GND", "2": "CC2"}, (138.6, 58.9, 0, "F"))
     add("R2", "27R", "eugeo:R_Small", FP_R, {"1": "CONN_D+", "2": "USB_D+"}, (158.6, 57.0, 0, "F"))
     add("R3", "27R", "eugeo:R_Small", FP_R, {"1": "CONN_D-", "2": "USB_D-"}, (158.6, 59.5, 0, "F"))
 

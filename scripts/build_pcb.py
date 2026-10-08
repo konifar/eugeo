@@ -28,7 +28,7 @@ SLOT_PITCH = 0.8
 BUS0 = 124.0          # first B.Cu column bus below bottom row
 FAN_X0 = 123.2        # first fan-out turn column (left side; mirrored on the right)
 FAN_PITCH = 0.7
-REF_POS = {"Y1": (153.84, 88.0, 1.0), "U3": (143.3, 88.9, 1.0), "C6": (141.0, 95.6, 1.0), "C7": (141.0, 92.8, 1.0), "LED1": (156.6, 108.2, 1.0), "LED2": (159.0, 116.3, 1.0)}
+REF_POS = {"Y1": (153.84, 88.0, 1.0), "U3": (143.3, 88.9, 1.0), "C6": (141.0, 95.6, 1.0), "C7": (141.0, 92.8, 1.0)}
 BUS_PITCH = 1.0
 CLI = os.environ.get("KICAD_CLI", "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli")
 
@@ -121,7 +121,7 @@ def main():
             a_, b_ = fp.FindPadByNumber("1").GetPosition(), fp.FindPadByNumber("2").GetPosition()
             fp.Reference().SetPosition(pcbnew.VECTOR2I((a_.x + b_.x) // 2, (a_.y + b_.y) // 2))
             fp.Reference().SetTextAngleDegrees(90 if abs(a_.x - b_.x) < abs(a_.y - b_.y) else 0)
-        if p["ref"] in ("U1", "U2", "U4"):            # SMD ICs carry their own marking
+        if p["ref"] in ("U1", "U2", "U4", "LED1", "LED2"):   # ICs / LEDs (no room: flash below, R6 above)
             fp.Reference().SetVisible(False)
         if p["ref"] in REF_POS:
             rx, ry, rsize = REF_POS[p["ref"]]
@@ -384,7 +384,7 @@ def main():
         for r_ in range(4):
             k = (5, 7, 13, 19)[r_]                      # odd k: the cathode stepped towards the centre
             cx, cy = design.diode_x(side, k)[1], design.diode_stack_y(k)
-            pin = up((3, 5, 7, 8)[r_] if side == 0 else (40, 38, 36, 35)[r_])
+            pin = up(design.GPIO_PIN[design.ROW_GPIO[r_ + 4 * side]])
             sgn = 1 if side == 0 else -1
             if r_ == 0:
                 path([pin, (cx + sgn * 1.7, pin[1]), (cx, cy)], f"ROW{r_ + 4 * side}")
@@ -413,13 +413,22 @@ def main():
             via((xv, yv), n)
             path([(xv, yv), (xv, yb)], n)
             via((xv, yb), n)
-    # bottom right: LED2 / LED1 down the right of the crystal to their resistors,
+    # LEDs: the two top left GPIOs fan out above the rows, drop to the back and run
+    # up through their 0402 resistors (R7 / R8, back side) to the LEDs above the flash
+    p4, p3 = up(4), up(3)                                   # LED1 (GP2), LED2 (GP1)
+    v1, v2 = (144.6, 74.6), (145.4, 74.6)
+    path([p4, (145.6, p4[1]), v1], "LED1")
+    path([p3, (146.0, p3[1]), v2], "LED2")
+    via(v1, "LED1")
+    via(v2, "LED2")
+    netpad = lambda ref, n: [(pcbnew.ToMM(q.GetPosition().x), pcbnew.ToMM(q.GetPosition().y))
+                             for q in fps[ref].Pads() if q.GetNetname().lstrip("/") == n][0]
+    a1, a2 = pad("LED1", 2), pad("LED2", 2)
+    path([v1, netpad("R7", "LED1")], "LED1", B)
+    path([netpad("R7", "LED1_A"), (v1[0], 64.6), (a1[0], 64.6), a1], "LED1_A", B)
+    path([v2, netpad("R8", "LED2")], "LED2", B)
+    path([netpad("R8", "LED2_A"), (v2[0], 64.0), (a2[0], 63.26), a2], "LED2_A", B)
     # RUN through a via and along the back to R9 and the RESET button
-    r8, r7 = pad("R8", 1), pad("R7", 1)
-    path([up(28), (up(28)[0], 81.3), (r8[0], 81.3), r8], "LED2")
-    path([up(27), (up(27)[0], 81.7), (r7[0], 81.7), r7], "LED1")
-    path([pad("R8", 2), pad("LED2", 2)], "LED2_A")
-    path([pad("R7", 2), pad("LED1", 2)], "LED1_A")
     vr = (158.8, 83.2)
     path([up(26), (up(26)[0], 82.1), (vr[0], 82.1), vr], "RUN")
     via(vr, "RUN")
