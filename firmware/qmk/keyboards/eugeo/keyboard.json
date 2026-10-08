@@ -29,8 +29,8 @@
       "GP4",
       "GP5",
       "GP6",
-      "GP28",
       "GP26",
+      "GP25",
       "GP24",
       "GP23"
     ]
@@ -39,7 +39,7 @@
   "processor": "RP2040",
   "bootloader": "rp2040",
   "indicators": {
-    "caps_lock": "GP2"
+    "caps_lock": "GP1"
   },
   "community_layouts": [
     "ortho_4x12"

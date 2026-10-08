@@ -28,7 +28,8 @@ SLOT_PITCH = 0.8
 BUS0 = 124.0          # first B.Cu column bus below bottom row
 FAN_X0 = 123.2        # first fan-out turn column (left side; mirrored on the right)
 FAN_PITCH = 0.7
-REF_POS = {"Y1": (153.84, 88.0, 1.0), "U3": (143.3, 88.9, 1.0), "C6": (141.0, 95.6, 1.0), "C7": (141.0, 92.8, 1.0)}
+REF_POS = {"Y1": (152.4, 88.0, 1.0), "C7": (144.45, 95.4, 1.0), "C1": (149.25, 95.4, 1.0),
+           "C2": (155.55, 95.4, 1.0), "C6": (160.35, 95.4, 1.0)}
 BUS_PITCH = 1.0
 CLI = os.environ.get("KICAD_CLI", "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli")
 
@@ -121,7 +122,7 @@ def main():
             a_, b_ = fp.FindPadByNumber("1").GetPosition(), fp.FindPadByNumber("2").GetPosition()
             fp.Reference().SetPosition(pcbnew.VECTOR2I((a_.x + b_.x) // 2, (a_.y + b_.y) // 2))
             fp.Reference().SetTextAngleDegrees(90 if abs(a_.x - b_.x) < abs(a_.y - b_.y) else 0)
-        if p["ref"] in ("U1", "U2", "U4", "LED1", "LED2"):   # ICs / LEDs (no room: flash below, R6 above)
+        if p["ref"] in ("U1", "U2", "U4", "LED1", "LED2", "SW1", "SW2"):   # marked otherwise / no room
             fp.Reference().SetVisible(False)
         if p["ref"] in REF_POS:
             rx, ry, rsize = REF_POS[p["ref"]]
@@ -172,8 +173,8 @@ def main():
         board.Add(t)
 
     text("eugeo", design.CENTER_X, 63.4, size=1.2, thick=0.2)
-    text("RESET", 145.25, 106.75, size=1.0, thick=0.15)
-    text("BOOT", 145.25, 116.75, size=1.0, thick=0.15)
+    text("RESET", 145.25, 112.25, size=1.0, thick=0.15)
+    text("BOOT", 159.55, 112.25, size=1.0, thick=0.15)
     text(f"eugeo rev{design.REV}  6x4x2 hot-swap", design.CENTER_X, 126.2, pcbnew.B_SilkS, 1.0)
     text("based on Lumberjack by peej (MIT)", design.CENTER_X, 128.2, pcbnew.B_SilkS, 1.0)
 
@@ -365,10 +366,10 @@ def main():
     path([pad("C22", 2), g22], "GND")
     via(g22, "GND")
 
-    # USB: D+ / D- straight up between C20 and C18, then diagonally to R2 / R3
+    # USB: D+ / D- straight up between C20 and C18, then round the right LED to R2 / R3
     r2, r3 = pad("R2", 2), pad("R3", 2)
-    path([up(47), (153.4, 67.8), (156.0, 67.8), (165.6, 58.2), r2], "USB_D+")
-    path([up(46), (153.8, 68.4), (156.0, 68.4), (224.4 - r3[1], r3[1]), r3], "USB_D-")
+    path([up(47), (153.4, 67.8), (164.6, 67.8), (164.6, r2[1]), r2], "USB_D+")
+    path([up(46), (153.8, 68.4), (165.0, 68.4), (165.0, r3[1]), r3], "USB_D-")
 
     # crystal: XIN straight down, XOUT through R11
     xi = pad("Y1", 1)
@@ -413,44 +414,43 @@ def main():
             via((xv, yv), n)
             path([(xv, yv), (xv, yb)], n)
             via((xv, yb), n)
-    # LEDs: the two top left GPIOs fan out above the rows, drop to the back and run
-    # up through their 0402 resistors (R7 / R8, back side) to the LEDs above the flash
-    p4, p3 = up(4), up(3)                                   # LED1 (GP2), LED2 (GP1)
-    v1, v2 = (144.6, 74.6), (145.4, 74.6)
-    path([p4, (145.6, p4[1]), v1], "LED1")
-    path([p3, (146.0, p3[1]), v2], "LED2")
-    via(v1, "LED1")
-    via(v2, "LED2")
+    # LEDs: the topmost GPIO on each side runs out above the rows, drops to the back
+    # and climbs through its 0402 resistor (R7 / R8, back side) to the LED above
     netpad = lambda ref, n: [(pcbnew.ToMM(q.GetPosition().x), pcbnew.ToMM(q.GetPosition().y))
                              for q in fps[ref].Pads() if q.GetNetname().lstrip("/") == n][0]
-    a1, a2 = pad("LED1", 2), pad("LED2", 2)
-    path([v1, netpad("R7", "LED1")], "LED1", B)
-    path([netpad("R7", "LED1_A"), (v1[0], 64.6), (a1[0], 64.6), a1], "LED1_A", B)
-    path([v2, netpad("R8", "LED2")], "LED2", B)
-    path([netpad("R8", "LED2_A"), (v2[0], 64.0), (a2[0], 63.26), a2], "LED2_A", B)
+    for led, res, k, sgn in (("LED1", "R7", 3, -1), ("LED2", "R8", 40, 1)):
+        pin = up(k)
+        v = (design.CENTER_X + sgn * 7.0, 74.6)               # 145.4 / 159.4
+        path([pin, (v[0] - sgn * 0.6, pin[1]), v], led)
+        via(v, led)
+        an = pad(led, 2)
+        path([v, netpad(res, led)], led, B)
+        path([netpad(res, led + "_A"), (v[0], an[1] + 1.0), an], led + "_A", B)
     # RUN through a via and along the back to R9 and the RESET button
-    vr = (158.8, 83.2)
-    path([up(26), (up(26)[0], 82.1), (vr[0], 82.1), vr], "RUN")
+    vr = (154.2, 84.0)
+    path([up(26), vr], "RUN")
     via(vr, "RUN")
     r9, s1 = pad("R9", 2), [q for q in (fps["SW1"].Pads()) if q.GetNetname().lstrip("/") == "RUN"]
     s1 = min(((pcbnew.ToMM(q.GetPosition().x), pcbnew.ToMM(q.GetPosition().y)) for q in s1), key=lambda t: t[1])
-    path([vr, (vr[0], 94.0), (r9[0] + 0.7, 94.0), (r9[0], 94.7), r9], "RUN", B)
-    path([r9, (r9[0] - 1.2, 96.8), (s1[0], 96.8), s1], "RUN", B)
+    path([vr, (design.CENTER_X, vr[1] + vr[0] - design.CENTER_X), (design.CENTER_X, r9[1] - 1.8), r9], "RUN", B)
+    path([r9, (r9[0] - 0.6, r9[1] - 0.6), (s1[0], r9[1] - 0.6), s1], "RUN", B)
     # QSPI_SS also feeds the BOOT button (R10): via inside the flash footprint
     vs = (147.3, 71.5)
     path([pad("U2", 1), vs], "QSPI_SS")
     via(vs, "QSPI_SS")
 
     # GND of the regulator corner: tie the THT grounds together on top
-    path([pad("U3", 1), pad("C7", 2), pad("C6", 2), (pad("SW1", 2)[0], pad("C6", 2)[1] + 1.6), pad("SW1", 2)],
-         "GND", F, 0.4)
+    sw2 = lambda ref: min((t for t in ((pcbnew.ToMM(q.GetPosition().x), pcbnew.ToMM(q.GetPosition().y))
+                                       for q in fps[ref].Pads() if q.GetNetname() == "GND")), key=lambda t: t[1])
+    path([pad("U3", 1), pad("C7", 2), (sw2("SW1")[0], pad("C7", 2)[1] + 1.8), sw2("SW1")], "GND", F, 0.4)
+    path([pad("C6", 2), (sw2("SW2")[0], pad("C6", 2)[1] + 1.8), sw2("SW2")], "GND", F, 0.4)
 
     # +3V3 feed: ring -> back side -> via -> MCP1700 output
     vd = (147.6, 82.8)
     path([va, (147.6, 82.1), vd], "+3V3", B, 0.25)
     via(vd, "+3V3")
     o3 = pad("U3", 3)
-    path([vd, (o3[0], vd[1] + (vd[0] - o3[0])), o3], "+3V3", F, 0.25)
+    path([vd, (vd[0] - (o3[1] - vd[1]), o3[1]), o3], "+3V3", F, 0.25)
 
     # cathodes of each row group: a zigzag F.Cu track through the six cathode pads
     for side in (0, 1):
