@@ -28,8 +28,12 @@ FOOTPRINT = "Kailh_MX_Hotswap_Socket"
 SOCKET_DX, SOCKET_DY = (-7.085 + 5.842) / 2, (-2.54 + -5.08) / 2
 ROTATION = 0                 # verified in JLCPCB's placement preview (bottom view) on 2026-10-06
 CLI = os.environ.get("KICAD_CLI", "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli")
-# JLCPCB rotation = KiCad rotation + offset, per footprint (check the placement preview)
-ROT_OFFSET = {}
+# JLCPCB rotation = KiCad rotation + offset, per (footprint, side). Checked against the
+# part models in JLCPCB's placement preview on 2026-10-08 (pin 1 on pad 1, leads on pads).
+ROT_OFFSET = {
+    ("SOIC-8_5.3x5.3mm_P1.27mm", "Top"): 270,
+    ("SOT-23-6", "Bottom"): 90,
+}
 
 
 def smd_rows():
@@ -44,9 +48,9 @@ def smd_rows():
         if not p:
             continue
         fp = p["footprint"].split(":")[1]
-        rot = (float(r["Rot"]) + ROT_OFFSET.get(fp, 0)) % 360
-        rows.append((r["Ref"], r["Val"], fp, p["lcsc"], float(r["PosX"]), float(r["PosY"]), rot,
-                     "Top" if r["Side"] == "top" else "Bottom"))
+        side = "Top" if r["Side"] == "top" else "Bottom"
+        rot = (float(r["Rot"]) + ROT_OFFSET.get((fp, side), 0)) % 360
+        rows.append((r["Ref"], r["Val"], fp, p["lcsc"], float(r["PosX"]), float(r["PosY"]), rot, side))
     missing = set(lcsc) - {r[0] for r in rows}
     if missing:
         raise SystemExit(f"no position for {sorted(missing)}")
