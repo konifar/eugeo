@@ -1,21 +1,25 @@
-"""Rounded tray case for eugeo (Mojo60-like pebble shape), for SLA resin printing.
+"""Rounded gasket-mount case for eugeo (Mojo60-like pebble shape), for SLA resin printing.
 
-    .venv/bin/python scripts/case.py      # -> case/eugeo-case.step, case/eugeo-case.stl
+    .venv/bin/python scripts/case.py      # -> case/eugeo-case-{bottom,top}.{step,stl}
 
 Coordinates: X/Y follow the PCB (centre of the board = origin, +Y = back / USB side),
 Z = 0 is the underside of the PCB.
 
-Assembly (no threaded inserts needed in resin):
-  case boss (from below, M2x10 pan head) -> PCB -> M2 3.5 mm female-female standoff
-  -> switch plate (optional M2x3 from the top)
+Two pieces split at the middle of the switch plate:
+  bottom tray : floor, walls, USB-C opening, nameplate, lower half of the tab recesses
+  top frame   : the rim above the plates, upper half of the tab recesses, M2 nut pockets
+The switch plates (PCB hanging from them on M2 3.5 mm standoffs) rest on PORON pads in
+the tab recesses and are clamped by pads in the top frame; nothing else touches the case.
+The halves are joined by 8 x M2x10 pan heads from below into M2 nuts in the top frame
+(no threaded inserts needed in resin).
 """
 import math
 import os
 import sys
 
 from build123d import (Align, Axis, BuildPart, BuildSketch, Circle, Cylinder, Keep, Locations, Mode,
-                       Plane, Pos, RectangleRounded, SlotOverall, Text, export_step, export_stl,
-                       extrude, fillet, insert, split)
+                       Plane, Pos, Rectangle, RectangleRounded, RegularPolygon, SlotOverall, Text,
+                       export_step, export_stl, extrude, fillet, insert, split)
 
 sys.path.insert(0, os.path.dirname(__file__))
 import design  # noqa: E402
@@ -41,14 +45,19 @@ CORNER_R = 12.0          # plan-view outer corner radius
 TOP_FILLET = 6.5
 BOTTOM_FILLET = 4.5
 RIM_FILLET = 1.0
-BOTTOM_RIM = 6.0         # width of the ring the case stands on (bottom is hollowed out)
+BOTTOM_RIM = 7.0         # width of the ring the case stands on (bottom is hollowed out)
 
-BOSS_D = design.CASE_BOSS_D
+# gasket mount
+PLATE_BOTTOM = PLATE_TOP - 1.5
+Z_SPLIT = PLATE_TOP - 0.75                     # case halves meet at the middle of the plate
+RECESS_Z = (PLATE_BOTTOM - design.GASKET_GAP, PLATE_TOP + design.GASKET_GAP)
+RECESS_PAD = 0.5                               # recess larger than the tab on each side / at the tip
 SCREW_D = 2.4            # M2 clearance
-HEAD_D = 4.4             # M2 pan head counterbore
-HEAD_SEAT = -6.4         # screw head seat: M2x10 then engages 2 mm of the 3.5 mm standoff
-PILLARS = design.PILLARS
-USB_W, USB_H = 14.0, 8.5  # room for the plug overmold
+HEAD_D = 4.2             # M2 pan head counterbore
+SCREW_INSET = 4.2        # screw axis from the outer wall surface
+HEAD_SEAT = Z_SPLIT - 7.6                      # M2x10: tip 2.4 mm above the split, through the nut
+NUT_AF, NUT_T = 4.15, 1.8                      # M2 nut pocket in the top frame (4.0 mm AF, 1.6 mm)
+USB_W, USB_H = 14.0, 9.5  # room for the plug overmold and the board moving on its gaskets
 USB_Z = -1.63             # receptacle centre (TYPE-C-31-M-12 on the back side)
 
 # nameplate on the back wall: a recessed pill the same height as the USB-C opening,
@@ -141,17 +150,12 @@ def main():
             RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, CORNER_R - BOTTOM_RIM)
         extrude(amount=floor_bottom - (back_bottom - 2), mode=Mode.SUBTRACT)
 
-        # screw bosses and support pillars standing on the floor up to the PCB
-        holes = [to_case(x, y) for x, y in design.HOLES]
-        with Locations(*[(x, y, FLOOR_TOP) for x, y in holes]):
-            Cylinder(BOSS_D / 2, -FLOOR_TOP, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        with Locations(*[(*to_case(x, y), FLOOR_TOP) for x, y in PILLARS]):
-            Cylinder(2.5, -FLOOR_TOP, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        with Locations(*[(x, y, floor_bottom - 1) for x, y in holes]):
-            Cylinder(SCREW_D / 2, -floor_bottom + 2, align=(Align.CENTER, Align.CENTER, Align.MIN),
-                     mode=Mode.SUBTRACT)
-            Cylinder(HEAD_D / 2, HEAD_SEAT - floor_bottom + 1, align=(Align.CENTER, Align.CENTER, Align.MIN),
-                     mode=Mode.SUBTRACT)
+        # tab recesses: the plates' gasket tabs and their PORON pads sit in these
+        for x0, x1_, y0, y1_ in tab_recesses():
+            with BuildSketch(Plane.XY.offset(RECESS_Z[0])):
+                with Locations(((x0 + x1_) / 2, (y0 + y1_) / 2)):
+                    Rectangle(x1_ - x0, y1_ - y0)
+            extrude(amount=RECESS_Z[1] - RECESS_Z[0], mode=Mode.SUBTRACT)
 
         # USB-C opening in the back wall
         usb_plane = Plane(origin=(0, pocket_h / 2 - 1, USB_Z), x_dir=(1, 0, 0), z_dir=(0, 1, 0))
@@ -172,18 +176,63 @@ def main():
                 Circle(RIVET_D / 2)
         extrude(amount=BADGE_DEPTH)
 
-    part = case.part
+    body = case.part
+    bottom = split(body, bisect_by=Plane.XY.offset(Z_SPLIT), keep=Keep.BOTTOM)
+    top = split(body, bisect_by=Plane.XY.offset(Z_SPLIT), keep=Keep.TOP)
+    # M2x10 from below: clearance hole + head counterbore in the tray, nut pocket in the frame
+    for x, y in screw_points(outer_w, outer_h):
+        bottom -= Pos(x, y, back_bottom - 2) * Cylinder(SCREW_D / 2, Z_SPLIT - back_bottom + 3,
+                                                       align=(Align.CENTER, Align.CENTER, Align.MIN))
+        bottom -= Pos(x, y, back_bottom - 2) * Cylinder(HEAD_D / 2, HEAD_SEAT - back_bottom + 2,
+                                                       align=(Align.CENTER, Align.CENTER, Align.MIN))
+        top -= Pos(x, y, Z_SPLIT - 0.1) * Cylinder(SCREW_D / 2, 3.4, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        with BuildPart() as nut:
+            with BuildSketch(Plane.XY.offset(Z_SPLIT - 0.1)):
+                with Locations((x, y)):
+                    RegularPolygon(NUT_AF / 2 / math.cos(math.radians(30)), 6)
+            extrude(amount=NUT_T + 0.1)
+        top -= nut.part
+
     os.makedirs(os.path.join(ROOT, "case"), exist_ok=True)
     export_cover()
-    step = os.path.join(ROOT, "case", "eugeo-case.step")
-    stl = os.path.join(ROOT, "case", "eugeo-case.stl")
-    export_step(part, step)
-    export_stl(part, stl, tolerance=0.02, angular_tolerance=0.1)
-    bb = part.bounding_box()
-    print(f"size {bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm, "
-          f"volume {part.volume / 1000:.1f} cm3, valid={part.is_valid}")
-    print("front height", round(Z_TOP - FRONT_BOTTOM, 1), "back height", round(Z_TOP - back_bottom, 1))
-    print("wrote", step, stl)
+    for name, part in (("bottom", bottom), ("top", top)):
+        step = os.path.join(ROOT, "case", f"eugeo-case-{name}.step")
+        stl = os.path.join(ROOT, "case", f"eugeo-case-{name}.stl")
+        export_step(part, step)
+        export_stl(part, stl, tolerance=0.02, angular_tolerance=0.1)
+        bb = part.bounding_box()
+        print(f"{name}: {bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm, "
+              f"volume {part.volume / 1000:.1f} cm3, valid={part.is_valid}")
+    print("front height", round(Z_TOP - FRONT_BOTTOM, 1), "back height", round(Z_TOP - back_bottom, 1),
+          "split at", round(Z_SPLIT, 2), "tab recesses", len(tab_recesses()))
+
+
+def tab_recesses():
+    """[(x0, x1, y0, y1)] in case coordinates for every plate tab (both plates)."""
+    w, d, pad = design.GASKET_TAB_W, design.GASKET_TAB_D, RECESS_PAD
+    hw, hh = PCB_W / 2, PCB_H / 2
+    out = []
+    for right in (False, True):
+        for edge, pos in design.gasket_tabs(right):
+            if edge in ("back", "front"):
+                x = pos - CX
+                y0, y1_ = hh - 0.1, hh + d + pad
+                if edge == "front":
+                    y0, y1_ = -y1_, -y0
+                out.append((x - w / 2 - pad, x + w / 2 + pad, y0, y1_))
+            else:
+                y = CY - pos
+                x0, x1_ = -(hw + d + pad), -hw + 0.1
+                if right:
+                    x0, x1_ = -x1_, -x0
+                out.append((x0, x1_, y - w / 2 - pad, y + w / 2 + pad))
+    return out
+
+
+def screw_points(outer_w, outer_h):
+    y = outer_h / 2 - SCREW_INSET
+    xs = (outer_w / 2 - 22, 80.0)
+    return [(sx * x, sy * y) for x in xs for sx in (-1, 1) for sy in (-1, 1)]
 
 
 if __name__ == "__main__":

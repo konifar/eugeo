@@ -38,7 +38,8 @@ JOBS = [
     ("eugeo-switch-plate_pom-1.5mm_245x245.svg", "Laser_pom_template.svg", "245x245", (245, 245),
      [("plates/eugeo-plate.kicad_pcb", 2)], "POM 1.5 mm"),
     ("eugeo-foam_poron-3mm_500x100.svg", "Laser_poron_template.svg", "500x100", (500, 100),
-     [("foam/eugeo-plate-foam.kicad_pcb", 2), ("foam/eugeo-case-foam.kicad_pcb", 2)], "PORON 3 mm"),
+     [("foam/eugeo-plate-foam.kicad_pcb", 2), ("foam/eugeo-case-foam.kicad_pcb", 2),
+      ("foam/eugeo-gasket-pad.kicad_pcb", 20)], "PORON 3 mm"),
 ]
 
 

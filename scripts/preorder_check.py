@@ -5,7 +5,7 @@
   1. KiCad DRC (with schematic parity) and ERC are clean
   2. every footprint sits exactly where design.py puts it; outline matches
   3. the change against <git-rev> (default HEAD~1) is limited to added/removed footprints
-  4. no exposed copper under standoffs, screw heads or case bosses
+  4. no exposed copper under standoffs or screw heads
   5. real minimum feature sizes vs JLCPCB capabilities
   6. the Gerber / drill zip matches a fresh export of the current board
   7. drill file holes, JLCPCB CPL, plate / cover / bottom holes all line up with the PCB,
@@ -127,7 +127,7 @@ def main(base):
     check(tented == vias, f"vias tented (covered by solder mask): {tented}/{vias}")
     hardware = []
     for x, y in design.HOLES:
-        hardware += [(x, y, 2.4, "F", "M2 3.5 mm standoff under plate"), (x, y, design.CASE_BOSS_D / 2 + 0.2, "B", "case boss")]
+        hardware += [(x, y, 2.4, "F", "M2 3.5 mm standoff under plate"), (x, y, 2.1, "B", "M2 screw head under PCB")]
     for x, y in design.COVER_HOLES:
         hardware += [(x, y, 2.4, "F", "M2 10 mm cover standoff"), (x, y, 2.1, "B", "M2 screw head")]
     hits = []
@@ -135,7 +135,7 @@ def main(base):
         for ex, ey, er, eside, name in exposed:
             if eside == hside and math.hypot(ex - hx, ey - hy) < hr + er:
                 hits.append(f"{what} at ({hx},{hy}) touches {name}")
-    check(not hits, f"no exposed copper under standoffs / screw heads / case bosses {hits[:4]}")
+    check(not hits, f"no exposed copper under standoffs / screw heads {hits[:4]}")
 
     # 5. manufacturing minimums -----------------------------------------------------
     tracks = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_TRACE_T]

@@ -20,17 +20,37 @@ import design  # noqa: E402
 def main(out):
     os.makedirs(out, exist_ok=True)
     x1, y1, x2, y2 = design.EDGE
-    half = design.KEY_X[5] + design.U / 2 - 0.425
-    plates = []
-    for a, b in ((x1, half), (x2 - (half - x1), x2)):
+    half = design.PLATE_X[1]
+    plates, pads = [], []
+    w, d, g = design.GASKET_TAB_W, design.GASKET_TAB_D, design.GASKET_GAP
+    for right, (a, b) in ((False, (x1, half)), (True, (x2 - (half - x1), x2))):
+        tabs = []
+        for edge, pos in design.gasket_tabs(right):
+            if edge in ("back", "front"):
+                ty = (y1 - d / 2) if edge == "back" else (y2 + d / 2)
+                tabs.append((C.to_case(pos, ty), (w, d)))
+            else:
+                tx = (x2 + d / 2) if right else (x1 - d / 2)
+                tabs.append((C.to_case(tx, pos), (d, w)))
         with BuildPart() as p:
             with BuildSketch(Plane.XY.offset(C.PLATE_TOP - 1.5)):
                 with Locations(C.to_case((a + b) / 2, (y1 + y2) / 2)):
                     RectangleRounded(b - a, y2 - y1, 1.0)
+                for (tx, ty), (sx, sy) in tabs:
+                    with Locations((tx, ty)):
+                        Rectangle(sx, sy)
                 with Locations(*[C.to_case(kx, ky) for kx in design.KEY_X for ky in design.KEY_Y if a < kx < b]):
                     RectangleRounded(14, 14, 0.5, mode=Mode.SUBTRACT)
             extrude(amount=1.5)
         plates.append(p.part)
+        for (tx, ty), (sx, sy) in tabs:                  # PORON pads (compressed) above and below
+            for z0 in (C.PLATE_TOP - 1.5 - g, C.PLATE_TOP):
+                with BuildPart() as pad:
+                    with BuildSketch(Plane.XY.offset(z0)):
+                        with Locations((tx, ty)):
+                            Rectangle(sx - 0.4, sy - 0.4)
+                    extrude(amount=g)
+                pads.append(pad.part)
     switches, caps = [], []
     for kx in design.KEY_X:
         for ky in design.KEY_Y:
@@ -57,7 +77,7 @@ def main(out):
                         RectangleRounded(13, 14, 2.0)
                 loft()
             caps.append(k.part)
-    for name, parts in (("plates", plates), ("switches", switches), ("keycaps", caps)):
+    for name, parts in (("plates", plates), ("pads", pads), ("switches", switches), ("keycaps", caps)):
         export_stl(Compound(parts), os.path.join(out, f"{name}.stl"))
     print("wrote", out)
 

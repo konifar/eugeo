@@ -24,7 +24,8 @@ def vol(shape):
 
 
 def main(pcb_step):
-    case = import_step(os.path.join(ROOT, "case", "eugeo-case.step"))
+    case = import_step(os.path.join(ROOT, "case", "eugeo-case-bottom.step")).fuse(
+        import_step(os.path.join(ROOT, "case", "eugeo-case-top.step")))
     pcb = import_step(pcb_step)
     solids = pcb.solids()
     board = max(solids, key=lambda s: s.bounding_box().size.X * s.bounding_box().size.Y)
@@ -38,11 +39,22 @@ def main(pcb_step):
         for cy in design.KEY_Y:
             x, y = C.to_case(cx, cy)
             parts.append(Pos(x - 0.65, y + 3.8, -0.95) * Box(15.7, 6.1, 1.9))
-    # switch plates (left / right halves)
-    half = design.KEY_X[5] + design.U / 2 - 0.425 - design.EDGE[0]
+    # switch plates (left / right halves) and their gasket tabs
+    half = design.PLATE_X[1] - design.PLATE_X[0]
     for sign in (-1, 1):
         x = sign * (design.EDGE[2] - design.EDGE[0] - half) / 2
         parts.append(Pos(x, 0, C.PLATE_TOP - 0.75) * Box(half, C.PCB_H, 1.5))
+    w, d = design.GASKET_TAB_W, design.GASKET_TAB_D
+    tabs = []
+    for right in (False, True):
+        for edge, pos in design.gasket_tabs(right):
+            if edge in ("back", "front"):
+                y = (C.PCB_H + d) / 2 * (1 if edge == "back" else -1)
+                tabs.append(Pos(pos - C.CX, y, C.PLATE_TOP - 0.75) * Box(w, d, 1.5))
+            else:
+                x = (C.PCB_W + d) / 2 * (1 if right else -1)
+                tabs.append(Pos(x, C.CY - pos, C.PLATE_TOP - 0.75) * Box(d, w, 1.5))
+    parts += tabs
 
     worst = []
     for p in parts:
@@ -56,6 +68,15 @@ def main(pcb_step):
     print("parts checked:", len(parts), "interfering:", len(worst))
     for v, c, sz in sorted(worst, key=lambda w: -w[0])[:10]:
         print(f"  {v:.2f} mm3 at ({c.X:.1f}, {c.Y:.1f}, {c.Z:.1f}) size ({sz.X:.1f}, {sz.Y:.1f}, {sz.Z:.1f})")
+    # gasket: each tab must have the pad gap above and below it inside its recess
+    squeezed = 0
+    for t in tabs:
+        tb = t.bounding_box()
+        for z in (tb.min.Z - design.GASKET_GAP / 2, tb.max.Z + design.GASKET_GAP / 2):
+            probe = Pos(tb.center().X, tb.center().Y, z) * Box(tb.size.X, tb.size.Y, design.GASKET_GAP - 0.05)
+            if vol(case.intersect(probe)) > 1e-3:
+                squeezed += 1
+    print("gasket tabs:", len(tabs), "/ pad spaces blocked:", squeezed)
     print("board underside clearance to floor:", -C.FLOOR_TOP, "mm; lowest part bottom:",
           round(min(p.bounding_box().min.Z for p in parts), 2), "mm")
 

@@ -2,7 +2,8 @@
 
     kicad-cli pcb export glb --subst-models -o /tmp/eugeo-pcb.glb eugeo.kicad_pcb
     Blender -b -P scripts/render_case.py -- case/eugeo-case.stl /tmp/eugeo-pcb.glb out.png asm iso [case/eugeo-cover.stl]
-(mode: case | asm, view: iso | hero | top | profile | back34 | badge | bottom; extra STLs as path[:acrylic|plate|keycap])
+(mode: case | asm, view: iso | hero | top | profile | back34 | badge | bottom | exploded;
+ extra STLs as path[:acrylic|plate|keycap|switch|resin|pad[:z offset]])
 """
 import bpy, sys, math, mathutils
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -38,11 +39,15 @@ MATERIALS = {   # name: (base colour, roughness, alpha)
     "plate": ((0.06, 0.06, 0.07, 1), 0.5, 1.0),
     "keycap": ((0.93, 0.92, 0.89, 1), 0.6, 1.0),
     "switch": ((0.2, 0.2, 0.22, 1), 0.4, 1.0),
+    "resin": ((0.82, 0.83, 0.86, 1), 0.45, 1.0),
+    "pad": ((0.12, 0.12, 0.13, 1), 0.9, 1.0),
 }
 for extra in argv[5:]:
-    path, _, kind = extra.partition(":")
+    path, kind, dz = (extra.split(":") + ["", ""])[:3]   # path[:kind[:z offset for exploded views]]
     bpy.ops.wm.stl_import(filepath=path)
     o = bpy.context.selected_objects[0]
+    if dz:
+        o.location.z += float(dz)
     color, rough, alpha = MATERIALS[kind or "acrylic"]
     m = bpy.data.materials.new(kind or "acrylic"); m.use_nodes = True
     bs = [n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED"][0]
@@ -67,6 +72,7 @@ views["hero"] = ((-300, -460, 300), 345, (0, 0, 0))
 views["profile"] = ((900, 0, 0), 110, (0, 0, -2))
 views["top"] = ((0.01, 0, 900), 320, (0, 0, 0))
 views["back34"] = ((-420, 520, 260), 190, (-40, 30, -5))
+views["exploded"] = ((-330, -420, 260), 230, (-70, 0, 20))
 v = views[argv[4] if len(argv) > 4 else "iso"]
 pos, scale = v[0], v[1]
 target = mathutils.Vector(v[2] if len(v) > 2 else (0, 0, 0))

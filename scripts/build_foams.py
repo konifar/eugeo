@@ -6,6 +6,7 @@ Both pieces are left/right symmetric: cut one shape twice (flip it for the other
   plate foam : between switch plate and PCB (3.5 mm gap, 3 mm PORON), same outline as the plate
   case foam  : between PCB and case floor (5 mm gap; 3 mm foam clears the 1.8 mm sockets),
                key area only - the centre (diodes / MCU / USB-C) stays open
+  gasket pad : 10 x 4 mm, one above and one below each plate tab (20 in all)
 """
 import os
 import sys
@@ -20,9 +21,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SWITCH_CUT = 14.5        # clears the switch bottom housing under the plate
 STANDOFF_HOLE = 4.4      # M2 3.5 mm hex standoff (~4.0 mm across corners); keeps a 1 mm web to the switch cut-outs
-BOSS_HOLE = design.CASE_BOSS_D + 1.5
+BOSS_HOLE = design.CASE_BOSS_D + 1.5   # M2 screw heads under the PCB (plate / PCB sandwich)
 CASE_FOAM_INSET = 0.5    # foam smaller than the case pocket on every side
 CENTER_GAP = 0.5         # case foam stops this far before the centre component area
+GASKET_PADS = 4 * len(design.gasket_tabs())   # above + below each tab, two plates
 
 
 PAGE_OFFSET = (20.0, 20.0)   # keep the 1:1 print clear of printer margins
@@ -83,6 +85,12 @@ def main():
     for hx, hy in design.HOLES[:4]:
         bp.hole(b, hx, hy, BOSS_HOLE)
     finish(b, path, "eugeo case foam - cut 2 (flip one), 3 mm PORON")
+
+    # gasket pad: one above and one below every plate tab (5 tabs per plate, 2 plates)
+    path, b = new_board("eugeo-gasket-pad")
+    pw, ph = design.GASKET_PAD
+    bp.rounded_rect(b, 0, 0, pw, ph, 0.5)
+    finish(b, path, f"eugeo gasket pad - cut {GASKET_PADS}, 3 mm PORON")
 
 
 if __name__ == "__main__":

@@ -223,8 +223,8 @@ POWER_NETS = ("+5V", "+3V3", "GND", "VBUS")
 # Centre cover: 2 mm acrylic on 10 mm M2 standoffs over the diodes / MCU / USB area.
 # Top holes sit above the diode stacks, bottom ones inside the stacks because the
 # column buses run along the bottom edge.
-# extra PCB supports in the case (no screw): below the USB-C, clear of the back-side U4,
-# and at the bottom edge
+# former case support pillars (the gasket-mount case has none); still kept clear of the
+# back-side art so the artwork does not move
 PILLARS = [(152.4, 70.2), (152.4, 125.5)]
 COVER_HOLES = [(131.5, 59.4), (173.3, 59.4), (131.5, 126.3), (173.3, 126.3)]   # cover corners
 # column buses along the bottom edge (B.Cu), same y on both halves; they split around
@@ -238,4 +238,21 @@ COVER_STANDOFF = 10.0             # above the PCB top surface
 
 # shared by case.py and build_foams.py
 CASE_CLEARANCE = 1.0     # PCB edge to case pocket wall
-CASE_BOSS_D = 5.5        # screw boss under each mounting hole
+CASE_BOSS_D = 5.5        # clearance around the M2 screw heads under the PCB (case foam holes)
+
+# Gasket mount: each switch plate has tabs on its outer edges, sandwiched between PORON
+# pads in recesses of a two-piece case (bottom tray + top frame). The PCB hangs from the
+# plates (standoffs at H1-H8 and the switches) and never touches the case.
+GASKET_TAB_W = 10.0      # tab width along the plate edge
+GASKET_TAB_D = 5.0       # tab length beyond the plate (= PCB) edge
+GASKET_TAB_X = (38.0, 100.0)   # left plate, front and back edges (board x); right plate mirrored
+GASKET_GAP = 2.2         # pad thickness once compressed (3 mm PORON), above and below each tab
+GASKET_PAD = (10.0, 4.0) # pad cut from 3 mm PORON: along the edge x into the wall
+PLATE_X = (EDGE[0], KEY_X[5] + U / 2 - 0.425)   # left switch plate; the right one is it turned over
+
+
+def gasket_tabs(right=False):
+    """[(edge, position)] of the plate tabs; edge in back / front / outer, position along it (board)."""
+    cy = (EDGE[1] + EDGE[3]) / 2
+    xs = [2 * CENTER_X - x for x in GASKET_TAB_X] if right else list(GASKET_TAB_X)
+    return [("back", x) for x in xs] + [("front", x) for x in xs] + [("outer", cy)]
