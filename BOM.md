@@ -2,12 +2,11 @@
 
 | Ref | Qty | Value / Part# | Description | Vendor |
 |---|---|---|---|---|
-| U1, U2, U4, C10-C15, C17, C18, C20, C22, R7, R8, R11 | — | 下表 | 表面実装部品（JLCPCB が実装） | `jlcpcb/eugeo-bom.csv` |
+| U1, U2, U4, F1, C10-C15, C17, C18, C20, C22, R7, R8, R11 | — | 下表 | 表面実装部品（JLCPCB が実装） | `jlcpcb/eugeo-bom.csv` |
 | C1, C2 | 2 | 22pF p2.5mm | セラミックコンデンサ（水晶の負荷容量） | |
 | C3 | 1 | 10uF p1.5mm (φ4mm) | 電解コンデンサ（+5V） | |
 | C6, C7 | 2 | 1uF p2.5mm | 積層セラミックコンデンサ（MCP1700 の入力 / 出力） | |
 | D1-D48 | 48 | 1N4148 | ダイオード | [秋月電子](https://akizukidenshi.com/catalog/g/g100941/) |
-| F1 | 1 | 100mA | ポリスイッチ | [秋月電子](https://akizukidenshi.com/catalog/g/g112911/) |
 | J1 | 1 | TYPE-C-31-M-12 | USB Type-C コネクタ（裏面実装） | [Amazon](https://www.amazon.co.jp/dp/B09PKH9XZY) |
 | LED1, LED2 | 2 | 3mm | LED（LED1=Caps Lock, LED2=レイヤー） | [秋月電子 黄緑](https://akizukidenshi.com/catalog/g/g111637/) / [赤](https://akizukidenshi.com/catalog/g/g111577/) |
 | MX1-MX48 | 48 | Kailh CPG151101S11 | MX 用ホットスワップソケット（裏面）。JLCPCB 実装なら LCSC C41430893（互換品） | |
@@ -44,6 +43,7 @@ RP2040 まわりの表面実装部品は JLCPCB の PCBA で実装します（`j
 | U1 | 1 | RP2040 | C2040 | マイコン（QFN-56） |
 | U2 | 1 | W25Q16JVSSIQ | C131025 | QSPI フラッシュ 2 MB（SOIC-8 208mil） |
 | U4 | 1 | USBLC6-2SC6 | C7519 | USB ESD 保護（裏面） |
+| F1 | 1 | MF-NSMF050-2（500mA, 1206） | C75464 | ポリスイッチ（VBUS → +5V）。背の高いラジアル品は中央カバーに当たるので SMD |
 | C10-C15, C20, C22 | 8 | 100nF 0402 | C1525 | パスコン |
 | C17, C18 | 2 | 1uF 0402 | C52923 | VREG_VIN / VREG_VOUT |
 | R7, R8, R11 | 3 | 1kΩ 0402 | C11702 | LED の電流制限（裏面）、水晶の直列抵抗 |

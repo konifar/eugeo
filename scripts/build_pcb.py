@@ -436,6 +436,12 @@ def main():
     vs = (147.3, 71.5)
     path([pad("U2", 1), vs], "QSPI_SS")
     via(vs, "QSPI_SS")
+    # ... then down the back beside the flash, and on top between Y1 and C1 to R10
+    # (the path Freerouting found before F1 became SMD; it no longer finds one on its own)
+    vs2 = (148.44, 80.17)
+    path([vs, (148.44, 72.64), vs2], "QSPI_SS", B)
+    via(vs2, "QSPI_SS")
+    path([vs2, (148.44, 89.87), (151.8, 93.23), (151.8, 98.09), (154.6, 100.89), pad("R10", 1)], "QSPI_SS")
 
     # GND of the regulator corner: tie the THT grounds together on top
     sw2 = lambda ref: min((t for t in ((pcbnew.ToMM(q.GetPosition().x), pcbnew.ToMM(q.GetPosition().y))

@@ -43,7 +43,6 @@ FULL_LCSC = {
     "C3": "C43846",                       # 10uF 25V, D4 P1.5
     "Y1": "C16369",                       # 12 MHz HC-49S, 20 pF
     "U3": "C511277",                      # MCP1700-3302E/TO
-    "F1": "C89660",                       # Bourns MF-R010
     "SW1": "C83205", "SW2": "C83205",     # 6x6 mm tact, THT
     "LED1": "C99772",                     # 3 mm red
     "LED2": "C85161",                     # 3 mm yellow-green

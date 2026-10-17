@@ -168,8 +168,9 @@ def parts():
     add("R10", "1k", "eugeo:R_Small", FP_R, {"1": "QSPI_SS", "2": "BOOTSEL"}, (154.6, 106.6, 90, "F"))
 
     # --- power: VBUS -> polyfuse -> +5V -> MCP1700 -> +3V3 ---------------------
-    add("F1", "100mA", "eugeo:Polyfuse_Small", "Fuse:Fuse_Bourns_MF-RHT100",
-        {"1": "VBUS", "2": "+5V"}, (159.75, 89.5, 90, "F"))
+    # SMD so it stays well under the centre cover (a radial PTC stands up to 12.7 mm)
+    add("F1", "500mA", "eugeo:Polyfuse_Small", "Fuse:Fuse_1206_3216Metric",
+        {"1": "VBUS", "2": "+5V"}, (159.75, 86.9, 90, "F"), lcsc="C75464")
     add("U3", "MCP1700-3302E", "eugeo:MCP1700-3302E_TO", "Package_TO_SOT_THT:TO-92_Inline_Wide",
         {"1": "GND", "2": "+5V", "3": "+3V3"}, (144.25, 90.2, 90, "F"))
     add("C6", "1u", "eugeo:C_Small", "Capacitor_THT:C_Disc_D3.0mm_W2.0mm_P2.50mm",
