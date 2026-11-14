@@ -3,9 +3,10 @@
     kicad-cli pcb export glb --subst-models -o /tmp/eugeo-pcb.glb eugeo.kicad_pcb
     Blender -b -P scripts/render_case.py -- case/eugeo-case.stl /tmp/eugeo-pcb.glb out.png asm iso [case/eugeo-cover.stl]
 (mode: case | asm, view: iso | hero | top | profile | back34 | badge | bottom | exploded;
- extra STLs as path[:acrylic|plate|keycap|switch|resin|pad[:z offset]])
+ extra STLs as path[:acrylic|plate|keycap|switch|resin|pad|foam|rubber[:z offset]];
+ PCB_DZ=<mm> moves the board for exploded views)
 """
-import bpy, sys, math, mathutils
+import bpy, os, sys, math, mathutils
 argv = sys.argv[sys.argv.index("--") + 1:]
 stl, glb, out, mode = argv[0], argv[1], argv[2], argv[3]
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -34,6 +35,7 @@ if mode != "case":
     print("board", board.name, max(p.x for p in bb)-min(p.x for p in bb), max(p.y for p in bb)-min(p.y for p in bb), zmax-zmin)
     for r in root:
         r.location.x -= cx; r.location.y -= cy; r.location.z -= zmin
+        r.location.z += float(os.environ.get("PCB_DZ", "0"))   # exploded views
 MATERIALS = {   # name: (base colour, roughness, alpha)
     "acrylic": ((0.9, 0.95, 1.0, 1), 0.05, 0.35),
     "plate": ((0.06, 0.06, 0.07, 1), 0.5, 1.0),
@@ -41,6 +43,8 @@ MATERIALS = {   # name: (base colour, roughness, alpha)
     "switch": ((0.2, 0.2, 0.22, 1), 0.4, 1.0),
     "resin": ((0.82, 0.83, 0.86, 1), 0.45, 1.0),
     "pad": ((0.12, 0.12, 0.13, 1), 0.9, 1.0),
+    "foam": ((0.16, 0.2, 0.3, 1), 0.95, 1.0),
+    "rubber": ((0.05, 0.05, 0.05, 1), 0.8, 1.0),
 }
 for extra in argv[5:]:
     path, kind, dz = (extra.split(":") + ["", ""])[:3]   # path[:kind[:z offset for exploded views]]
@@ -60,7 +64,10 @@ for extra in argv[5:]:
 world = bpy.data.worlds.new("w"); sc.world = world; world.use_nodes = True
 [n for n in world.node_tree.nodes if n.type == "BACKGROUND"][0].inputs[0].default_value = (0.93, 0.94, 0.96, 1)
 [n for n in world.node_tree.nodes if n.type == "BACKGROUND"][0].inputs[1].default_value = 0.8
-for loc, e in (((200, -300, 400), 3.0), ((-300, 200, 300), 1.5)):
+lights = [((200, -300, 400), 3.0), ((-300, 200, 300), 1.5)]
+if argv[4:5] in (["under"], ["bottom"]):          # views from below need their own key light
+    lights = [((200, -300, -400), 3.0), ((-300, 200, -300), 1.2)]
+for loc, e in lights:
     l = bpy.data.lights.new("sun", "SUN"); l.energy = e
     o = bpy.data.objects.new("sun", l); sc.collection.objects.link(o)
     o.rotation_euler = (mathutils.Vector(loc)).to_track_quat('Z', 'Y').to_euler()
@@ -73,6 +80,9 @@ views["profile"] = ((900, 0, 0), 110, (0, 0, -2))
 views["top"] = ((0.01, 0, 900), 320, (0, 0, 0))
 views["back34"] = ((-420, 520, 260), 190, (-40, 30, -5))
 views["exploded"] = ((-330, -420, 260), 230, (-70, 0, 20))
+views["stack"] = ((-330, -620, 330), 400, (0, 0, 45))
+views["under"] = ((-150, -330, -420), 330, (0, 0, -15))
+views["plan"] = ((0.01, -0.01, 900), 320, (0, 0, 0))
 v = views[argv[4] if len(argv) > 4 else "iso"]
 pos, scale = v[0], v[1]
 target = mathutils.Vector(v[2] if len(v) > 2 else (0, 0, 0))
