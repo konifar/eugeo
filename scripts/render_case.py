@@ -3,8 +3,8 @@
     kicad-cli pcb export glb --subst-models -o /tmp/eugeo-pcb.glb eugeo.kicad_pcb
     Blender -b -P scripts/render_case.py -- case/eugeo-case.stl /tmp/eugeo-pcb.glb out.png asm iso [case/eugeo-cover.stl]
 (mode: case | asm, view: iso | hero | top | profile | back34 | badge | bottom | exploded;
- extra STLs as path[:acrylic|plate|keycap|switch|resin|pad|foam|rubber[:z offset]];
- PCB_DZ=<mm> moves the board for exploded views)
+ extra STLs as path[:acrylic|plate|keycap|switch|resin|matte-black|pad|foam|rubber[:z offset]];
+ PCB_DZ=<mm> moves the board for exploded views, CASE_FINISH=matte-black paints the case)
 """
 import bpy, os, sys, math, mathutils
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -15,6 +15,8 @@ bpy.ops.wm.stl_import(filepath=stl)
 case = bpy.context.selected_objects[0]
 mat = bpy.data.materials.new("resin"); mat.use_nodes = True
 b = [n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"][0]; b.inputs["Base Color"].default_value = (0.82, 0.83, 0.86, 1); b.inputs["Roughness"].default_value = 0.45
+if os.environ.get("CASE_FINISH") == "matte-black":       # JLC3DP spray paint, matte black
+    b.inputs["Base Color"].default_value = (0.025, 0.025, 0.028, 1); b.inputs["Roughness"].default_value = 0.85
 case.data.materials.append(mat)
 if mode != "case":
     bpy.ops.import_scene.gltf(filepath=glb)
@@ -42,6 +44,7 @@ MATERIALS = {   # name: (base colour, roughness, alpha)
     "keycap": ((0.93, 0.92, 0.89, 1), 0.6, 1.0),
     "switch": ((0.2, 0.2, 0.22, 1), 0.4, 1.0),
     "resin": ((0.82, 0.83, 0.86, 1), 0.45, 1.0),
+    "matte-black": ((0.025, 0.025, 0.028, 1), 0.85, 1.0),
     "pad": ((0.12, 0.12, 0.13, 1), 0.9, 1.0),
     "foam": ((0.16, 0.2, 0.3, 1), 0.95, 1.0),
     "rubber": ((0.05, 0.05, 0.05, 1), 0.8, 1.0),

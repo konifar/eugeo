@@ -15,7 +15,7 @@ The halves are joined by 8 x M2x10 pan heads from below into M2 nuts in the top 
 (no threaded inserts needed).
 
 Clearances allow for MJF tolerances (+/-0.3 mm, +/-0.3 % over 100 mm: about 0.45 mm per end
-over the 303 mm length).
+over the 303 mm length) and for JLC3DP's spray paint inside and out (0.1-0.2 mm per surface).
 """
 import math
 import os
@@ -59,11 +59,11 @@ Z_SPLIT = PLATE_TOP - 0.75                     # case halves meet at the middle 
 RECESS_Z = (PLATE_BOTTOM - design.GASKET_GAP, PLATE_TOP + design.GASKET_GAP)
 RECESS_PAD = 0.5                               # recess larger than the tab on each side
 RECESS_TIP = 1.0                               # ... and beyond the tab tip (MJF shrink over the long axis)
-SCREW_D = 2.4            # M2 clearance
-HEAD_D = 4.6             # M2 pan head counterbore (ISO 7045 head 4.0 mm)
+SCREW_D = 2.8            # M2 clearance (+0.2 mm paint on each side)
+HEAD_D = 5.0             # M2 pan head counterbore (ISO 7045 head 4.0 mm, + paint)
 SCREW_INSET = 4.2        # screw axis from the outer wall surface
 HEAD_SEAT = Z_SPLIT - 7.6                      # M2x10: tip 2.4 mm above the split, through the nut
-NUT_AF, NUT_T = 4.3, 1.8                       # M2 nut pocket in the top frame (4.0 mm AF, 1.6 mm)
+NUT_AF, NUT_T = 4.7, 1.8                       # M2 nut pocket (4.0 mm AF, + paint); 1.8 deep so the painted ceiling (~1.6) clamps the 1.6 mm nut
 USB_W, USB_H = 14.0, 9.5  # room for the plug overmold and the board moving on its gaskets
 USB_Z = -1.63             # receptacle centre (TYPE-C-31-M-12 on the back side)
 
