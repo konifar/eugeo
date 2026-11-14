@@ -15,8 +15,8 @@ SVG = "{http://www.w3.org/2000/svg}"
 INK = "{http://www.inkscape.org/namespaces/inkscape}"
 CUT_COLORS = {"#ff0000", "#0000ff", "#00ff00", "#ff00ff", "#ff6600"}
 EXPECT = {  # file prefix -> (parts, {hole diameters mm})
-    "eugeo-cover": (1, {2.2}),
-    "eugeo-switch-plate": (2, {2.2}),
+    "eugeo-cover": (5, {2.2}),
+    "eugeo-switch-plate": (4, {2.2}),
     "eugeo-foam": (72, {4.4}),        # 3 sets: plate foam x2, case foam L / R, gasket pad x20
 }
 
@@ -34,6 +34,22 @@ def path_points(d):
     return pts, radii
 
 
+def seg_dist(p, q, r, s):
+    """Distance between segments pq and rs (they never cross here; parts are apart)."""
+    def pt_seg(a, b, c):
+        dx, dy = c[0] - b[0], c[1] - b[1]
+        l2 = dx * dx + dy * dy
+        t = 0.0 if l2 == 0 else max(0.0, min(1.0, ((a[0] - b[0]) * dx + (a[1] - b[1]) * dy) / l2))
+        return math.dist(a, (b[0] + t * dx, b[1] + t * dy))
+    return min(pt_seg(p, r, s), pt_seg(q, r, s), pt_seg(r, p, q), pt_seg(s, p, q))
+
+
+def outline_gap(a, b):
+    """Closest distance between two closed outlines (corner arcs taken as chords)."""
+    sa, sb = list(zip(a, a[1:] + a[:1])), list(zip(b, b[1:] + b[:1]))
+    return min(seg_dist(p, q, r, s) for p, q in sa for r, s in sb)
+
+
 def main():
     ok_all = True
     for f in sorted(glob.glob(os.path.join(ROOT, "lasercut", "yushakobo", "*.svg"))):
@@ -49,7 +65,7 @@ def main():
         if sizes != [f"{int(wmm)}x{int(hmm)}"]:
             errs.append(f"size layers {sizes}")
         cut = [g for g in root if g.get("id") == "eugeo_cut"][0]
-        parts, holes = [], []
+        parts, holes, outlines, min_gap = [], [], [], float("inf")
         for p in cut:
             st = dict(kv.split(":") for kv in p.get("style").split(";"))
             if st.get("fill") != "none" or st.get("stroke") not in CUT_COLORS:
@@ -66,13 +82,19 @@ def main():
             box = (min(xs), min(ys), max(xs), max(ys))
             if st["stroke"] == "#0000ff":
                 parts.append(box)
+                outlines.append([(x / k, y / k) for x, y in pts])
             if box[0] < 3 or box[1] < 3 or box[2] > wmm - 3 or box[3] > hmm - 3:
                 errs.append(f"inside the 3 mm margin: {box}")
+        # parts may interleave (tabs between tabs): measure outline to outline, not box to box
         for i, a in enumerate(parts):
-            for b in parts[i + 1:]:
-                gap = max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1] - b[3])
+            for j in range(i + 1, len(parts)):
+                b = parts[j]
+                if max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1] - b[3]) >= 2:
+                    continue
+                gap = outline_gap(outlines[i], outlines[j])
                 if gap < 2:
-                    errs.append(f"parts {gap:.1f} mm apart")
+                    errs.append(f"parts {gap:.2f} mm apart")
+                min_gap = min(min_gap, gap)
         # nothing filled (= engraved) on the sheet except the off-page notes layer
         skip = set(cut.iter())
         for g in root:
@@ -91,7 +113,8 @@ def main():
         if set(holes) != hole_d:
             errs.append(f"hole diameters {sorted(set(holes))} (expected {sorted(hole_d)})")
         sizes = sorted({(round(b[2] - b[0], 2), round(b[3] - b[1], 2)) for b in parts})
-        print(("PASS" if not errs else "FAIL"), name, f"{wmm:g}x{hmm:g} mm, {len(parts)} parts {sizes}, holes {sorted(set(holes))}", errs[:4])
+        gap_note = f", closest parts {min_gap:.1f} mm" if min_gap < float("inf") else ""
+        print(("PASS" if not errs else "FAIL"), name, f"{wmm:g}x{hmm:g} mm, {len(parts)} parts {sizes}, holes {sorted(set(holes))}{gap_note}", errs[:4])
         ok_all &= not errs
     sys.exit(0 if ok_all else 1)
 

@@ -35,10 +35,15 @@ FOAM_SETS = 3
 
 JOBS = [
     # output name, template, size layer, sheet (w, h), [(board, copies)], material note
+    # as many spares as fit: 5 covers turned sideways in one column
     ("eugeo-cover_acrylic-clear-2mm_115x300.svg", "Laser_acrylic_template.svg", "115x300", (115, 300),
-     [("plates/eugeo-cover.kicad_pcb", 1)], "acrylic clear 2 mm"),
+     [("plates/eugeo-cover.kicad_pcb", [(19.8, 3.5 + 59.2 * i, 90) for i in range(5)])], "acrylic clear 2 mm"),
+    # 4 plates (two keyboards): the tabs of neighbouring plates interleave, 4 mm apart
+    #   left: two plates as drawn, the lower one 14 mm to the right; right: two turned 90 degrees,
+    #   outer tabs facing each other and 14 mm apart sideways
     ("eugeo-switch-plate_pom-1.5mm_245x245.svg", "Laser_pom_template.svg", "245x245", (245, 245),
-     [("plates/eugeo-plate.kicad_pcb", 2)], "POM 1.5 mm"),
+     [("plates/eugeo-plate.kicad_pcb", [(4.0, 4.5, 0), (18.0, 88.85, 0),
+                                        (141.45, 4.5, "outer-down"), (155.45, 121.9, "outer-up")])], "POM 1.5 mm"),
     # three keyboards' worth on the largest sheet: one row per set, then the gasket pads
     ("eugeo-foam_poron-3mm_500x300.svg", "Laser_poron_template.svg", "500x300", (500, 300),
      [("foam/eugeo-plate-foam.kicad_pcb", 2), ("foam/eugeo-case-foam-left.kicad_pcb", 1),
@@ -125,6 +130,35 @@ def to_path(loop, f):
     return " ".join(d)
 
 
+def rotate_loops(loops, deg):
+    """Loops turned by deg (multiple of 90) about the origin; arcs keep start / end / mid."""
+    c, s_ = round(math.cos(math.radians(deg))), round(math.sin(math.radians(deg)))
+    t = lambda p: (c * p[0] - s_ * p[1], s_ * p[0] + c * p[1])
+    out = []
+    for loop in loops:
+        if loop[0][0] == "circle":
+            out.append([("circle", t(loop[0][1]), loop[0][2])])
+        else:
+            out.append([(seg[0],) + tuple(t(p) for p in seg[1:]) for seg in loop])
+    return out
+
+
+def orient(loops, rot):
+    """rot: degrees, or "outer-down" / "outer-up" = turn the plate so its outer tab (the
+    one on the left as drawn) points down / up."""
+    if isinstance(rot, (int, float)):
+        return rotate_loops(loops, rot)
+    x1, y1, x2, y2 = bbox(loops)
+    probe = [[("circle", (x1 + 1.0, (y1 + y2) / 2), 0.1)]]       # inside the outer tab
+    for deg in (90, 270):
+        r = rotate_loops(loops, deg)
+        bx1, by1, bx2, by2 = bbox(r)
+        py = bbox(rotate_loops(probe, deg))[1]
+        if (rot == "outer-down") == (py > (by1 + by2) / 2):
+            return r
+    raise SystemExit(f"cannot orient {rot}")
+
+
 def build(name, template, layer, sheet, boards, note, tdir):
     tree = ET.parse(os.path.join(tdir, template))
     svg = tree.getroot()
@@ -152,12 +186,17 @@ def build(name, template, layer, sheet, boards, note, tdir):
     x = y = MARGIN
     row_h, placed = 0.0, []
     for board, copies in boards:
-        loops = edge_loops(os.path.join(ROOT, board))
-        x1, y1, x2, y2 = bbox(loops)
-        w, h = x2 - x1, y2 - y1
-        outer = max(range(len(loops)), key=lambda i: (lambda b: (b[2] - b[0]) * (b[3] - b[1]))(bbox([loops[i]])))
-        for _ in range(copies):
-            if x + w > sheet[0] - MARGIN:                 # next row
+        base = edge_loops(os.path.join(ROOT, board))
+        outer = max(range(len(base)), key=lambda i: (lambda b: (b[2] - b[0]) * (b[3] - b[1]))(bbox([base[i]])))
+        # copies: a count (packed in rows) or explicit [(x, y, rotation)] of each bbox's top-left corner
+        spots = copies if isinstance(copies, list) else [None] * copies
+        for spot in spots:
+            loops = orient(base, spot[2]) if spot else base
+            x1, y1, x2, y2 = bbox(loops)
+            w, h = x2 - x1, y2 - y1
+            if spot:
+                x, y = spot[0], spot[1]
+            elif x + w > sheet[0] - MARGIN:               # next row
                 x, y, row_h = MARGIN, y + row_h + GAP, 0.0
             f = lambda p, ox=x, oy=y: ((p[0] - x1 + ox) * k, (p[1] - y1 + oy) * k)
             for i, loop in enumerate(loops):
