@@ -1,4 +1,4 @@
-"""Rounded gasket-mount case for eugeo (Mojo60-like pebble shape), for SLA resin printing.
+"""Rounded gasket-mount case for eugeo (Mojo60-like pebble shape), for MJF nylon (PA12) printing.
 
     .venv/bin/python scripts/case.py      # -> case/eugeo-case-{bottom,top}.{step,stl}
 
@@ -11,7 +11,10 @@ Two pieces split at the middle of the switch plate:
 The switch plates (PCB hanging from them on M2 3.5 mm standoffs) rest on PORON pads in
 the tab recesses and are clamped by pads in the top frame; nothing else touches the case.
 The halves are joined by 8 x M2x10 pan heads from below into M2 nuts in the top frame
-(no threaded inserts needed in resin).
+(no threaded inserts needed).
+
+Clearances allow for MJF tolerances (+/-0.3 mm, +/-0.3 % over 100 mm: about 0.45 mm per end
+over the 303 mm length).
 """
 import math
 import os
@@ -46,17 +49,19 @@ TOP_FILLET = 6.5
 BOTTOM_FILLET = 4.5
 RIM_FILLET = 1.0
 BOTTOM_RIM = 7.0         # width of the ring the case stands on (bottom is hollowed out)
+HOLLOW_CORNER_R = 25.0   # big corner radius on the hollow leaves a flat land in each corner for a rubber foot
 
 # gasket mount
 PLATE_BOTTOM = PLATE_TOP - 1.5
 Z_SPLIT = PLATE_TOP - 0.75                     # case halves meet at the middle of the plate
 RECESS_Z = (PLATE_BOTTOM - design.GASKET_GAP, PLATE_TOP + design.GASKET_GAP)
-RECESS_PAD = 0.5                               # recess larger than the tab on each side / at the tip
+RECESS_PAD = 0.5                               # recess larger than the tab on each side
+RECESS_TIP = 1.0                               # ... and beyond the tab tip (MJF shrink over the long axis)
 SCREW_D = 2.4            # M2 clearance
-HEAD_D = 4.2             # M2 pan head counterbore
+HEAD_D = 4.6             # M2 pan head counterbore (ISO 7045 head 4.0 mm)
 SCREW_INSET = 4.2        # screw axis from the outer wall surface
 HEAD_SEAT = Z_SPLIT - 7.6                      # M2x10: tip 2.4 mm above the split, through the nut
-NUT_AF, NUT_T = 4.15, 1.8                      # M2 nut pocket in the top frame (4.0 mm AF, 1.6 mm)
+NUT_AF, NUT_T = 4.3, 1.8                       # M2 nut pocket in the top frame (4.0 mm AF, 1.6 mm)
 USB_W, USB_H = 14.0, 9.5  # room for the plug overmold and the board moving on its gaskets
 USB_Z = -1.63             # receptacle centre (TYPE-C-31-M-12 on the back side)
 
@@ -147,7 +152,7 @@ def main():
 
         # hollow underside, leaving a floor and a ring to stand on
         with BuildSketch(Plane.XY.offset(back_bottom - 2)):
-            RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, CORNER_R - BOTTOM_RIM)
+            RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, HOLLOW_CORNER_R)
         extrude(amount=floor_bottom - (back_bottom - 2), mode=Mode.SUBTRACT)
 
         # tab recesses: the plates' gasket tabs and their PORON pads sit in these
@@ -209,20 +214,20 @@ def main():
 
 def tab_recesses():
     """[(x0, x1, y0, y1)] in case coordinates for every plate tab (both plates)."""
-    w, d, pad = design.GASKET_TAB_W, design.GASKET_TAB_D, RECESS_PAD
+    w, d, pad, tip = design.GASKET_TAB_W, design.GASKET_TAB_D, RECESS_PAD, RECESS_TIP
     hw, hh = PCB_W / 2, PCB_H / 2
     out = []
     for right in (False, True):
         for edge, pos in design.gasket_tabs(right):
             if edge in ("back", "front"):
                 x = pos - CX
-                y0, y1_ = hh - 0.1, hh + d + pad
+                y0, y1_ = hh - 0.1, hh + d + tip
                 if edge == "front":
                     y0, y1_ = -y1_, -y0
                 out.append((x - w / 2 - pad, x + w / 2 + pad, y0, y1_))
             else:
                 y = CY - pos
-                x0, x1_ = -(hw + d + pad), -hw + 0.1
+                x0, x1_ = -(hw + d + tip), -hw + 0.1
                 if right:
                     x0, x1_ = -x1_, -x0
                 out.append((x0, x1_, y - w / 2 - pad, y + w / 2 + pad))

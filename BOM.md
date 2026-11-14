@@ -19,13 +19,13 @@
 | U3 | 1 | MCP1700-3302E/TO | 3.3 V LDO（TO-92） | |
 | Y1 | 1 | HC49-4H 12MHz | 水晶振動子 | |
 | plate | 2 | `gerbers/eugeo-plate.zip` または `lasercut/yushakobo/eugeo-switch-plate_*.svg` | スイッチプレート（ガスケット用タブ付き、左右共通で右は裏返して使う。POM 1.5mm または FR4 1.6mm） | JLCPCB / [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) |
-| case | 1 | `case/eugeo-case-bottom.step` + `case/eugeo-case-top.step` | ケース 下トレイ + 上フレーム（JLC3DP SLA レジン） | |
+| case | 1 | `case/eugeo-case-bottom.step` + `case/eugeo-case-top.step` | ケース 下トレイ + 上フレーム（JLC3DP MJF ナイロン） | |
 | standoff | 8 | M2 3.5mm メス-メス | PCB - プレート間（1.5mm 厚プレートの場合） | [遊舎工房](https://shop.yushakobo.jp/products/a0800c2) |
 | screw | 16 | M2×3 なべ | プレート → スペーサー 8 本、PCB の裏 → スペーサー 8 本 | [遊舎工房](https://shop.yushakobo.jp/products/a0800n2) |
 | screw | 8 | M2×10 なべ | ケース 下トレイ → 上フレーム（底から） | ホームセンターなど（遊舎工房は 8 mm まで） |
 | nut | 8 | M2 六角ナット | 上フレームのナット穴に入れる | 遊舎工房 |
 | gasket | 20 | 3mm PORON 10×4mm | プレートのタブの上下（`foam/eugeo-gasket-pad`、フォームと同じシートで切る） | |
-| feet | 4〜6 | ゴム足 φ5〜6mm | ケース底のふち（幅 7 mm）に貼る | |
+| feet | 4 | ゴム足 φ8〜10mm | ケース底の四隅の平らな面に貼る | |
 | cover | 1 | `lasercut/yushakobo/eugeo-cover_*.svg` | 中央カバー（アクリル クリア 2mm、遊舎工房レーザー加工） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut) |
 | standoff | 4 | M2 10mm メス-メス | PCB - 中央カバー間 | |
 | screw | 8 | M2×4 | 中央カバーのスペーサー固定（PCB 下 4 本 + カバー上 4 本） | |
