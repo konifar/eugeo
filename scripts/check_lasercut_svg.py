@@ -15,8 +15,8 @@ SVG = "{http://www.w3.org/2000/svg}"
 INK = "{http://www.inkscape.org/namespaces/inkscape}"
 CUT_COLORS = {"#ff0000", "#0000ff", "#00ff00", "#ff00ff", "#ff6600"}
 EXPECT = {  # file prefix -> (parts, {hole diameters mm})
-    "eugeo-cover": (5, {2.2}),
-    "eugeo-switch-plate": (4, {2.2}),
+    "eugeo-cover": (26, {2.2}),
+    "eugeo-switch-plate": (8, {2.2}),
     "eugeo-foam": (72, {4.4}),        # 3 sets: plate foam x2, case foam L / R, gasket pad x20
 }
 

@@ -267,8 +267,8 @@ JLCPCB ではフォームのカットは扱っていないため、遊舎工房�
 
 | ファイル | 注文するサービス / 素材 / 厚さ / サイズ | 中身 |
 |---|---|---|
-| `eugeo-cover_acrylic-clear-2mm_115x300.svg` | [レーザー加工サービス](https://shop.yushakobo.jp/products/lasercut)（アクリル）/ アクリル クリア / 2mm / 115x300 | 中央カバー 5 枚（横向きに縦 1 列。1 枚 + 予備 4 枚） |
-| `eugeo-switch-plate_pom-1.5mm_245x245.svg` | [レーザー加工サービス（その2）](https://shop.yushakobo.jp/products/lasercut-2) / POM / 1.5mm / 245x245 | ガスケット用タブ付きスイッチプレート 4 枚（2 台分。左右共通、右は裏返して使う）。隣り合うプレートのタブを互い違いにかみ合わせ、4 mm 空けて並べている |
+| `eugeo-cover_acrylic-clear-2mm_450x300.svg` | [レーザー加工サービス](https://shop.yushakobo.jp/products/lasercut)（アクリル）/ アクリル クリア / 2mm / 450x300 | 中央カバー 26 枚（縦向き 7 枚 × 3 段 + 横向き 5 枚） |
+| `eugeo-switch-plate_pom-1.5mm_490x245.svg` | [レーザー加工サービス（その2）](https://shop.yushakobo.jp/products/lasercut-2) / POM / 1.5mm / 490x245 | ガスケット用タブ付きスイッチプレート 8 枚（4 台分。左右共通、右は裏返して使う）。隣り合うプレートのタブを互い違いにかみ合わせ、4 mm 空けて並べている |
 | `eugeo-foam_poron-3mm_500x300.svg` | レーザー加工サービス（その2）/ フォーム / 3mm / 500x300 | キーボード 3 台分。プレートフォーム 6 枚 + ケースフォーム左右 3 組 + ガスケットパッド 60 個（1 段目〜3 段目が 1 台分ずつ） |
 
 - 穴などの内側はカット①（赤）、外形はカット②（青）です。内側を先に切ってから部品を切り離す順番になります

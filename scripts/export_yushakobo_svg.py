@@ -35,15 +35,18 @@ FOAM_SETS = 3
 
 JOBS = [
     # output name, template, size layer, sheet (w, h), [(board, copies)], material note
-    # as many spares as fit: 5 covers turned sideways in one column
-    ("eugeo-cover_acrylic-clear-2mm_115x300.svg", "Laser_acrylic_template.svg", "115x300", (115, 300),
-     [("plates/eugeo-cover.kicad_pcb", [(19.8, 3.5 + 59.2 * i, 90) for i in range(5)])], "acrylic clear 2 mm"),
-    # 4 plates (two keyboards): the tabs of neighbouring plates interleave, 4 mm apart
-    #   left: two plates as drawn, the lower one 14 mm to the right; right: two turned 90 degrees,
-    #   outer tabs facing each other and 14 mm apart sideways
-    ("eugeo-switch-plate_pom-1.5mm_245x245.svg", "Laser_pom_template.svg", "245x245", (245, 245),
-     [("plates/eugeo-plate.kicad_pcb", [(4.0, 4.5, 0), (18.0, 88.85, 0),
-                                        (141.45, 4.5, "outer-down"), (155.45, 121.9, "outer-up")])], "POM 1.5 mm"),
+    # as many covers as fit on the largest sheet: 3 rows of 7 upright + 1 row of 5 sideways = 26
+    ("eugeo-cover_acrylic-clear-2mm_450x300.svg", "Laser_acrylic_template.svg", "450x300", (450, 300),
+     [("plates/eugeo-cover.kicad_pcb", [(3.5 + 59.2 * c, 3.5 + 78.35 * r, 0) for r in range(3) for c in range(7)]
+       + [(3.5 + 78.35 * c, 3.5 + 78.35 * 3, 90) for c in range(5)])], "acrylic clear 2 mm"),
+    # 8 plates (four keyboards) on the largest POM sheet: two blocks of 4 whose tabs interleave,
+    # 4 mm apart. In each 245 mm block: two plates as drawn, the lower one 14 mm to the right;
+    # next to them two turned 90 degrees, outer tabs facing each other and 14 mm apart sideways
+    ("eugeo-switch-plate_pom-1.5mm_490x245.svg", "Laser_pom_template.svg", "490x245", (490, 245),
+     [("plates/eugeo-plate.kicad_pcb", [(bx + x, y, r) for bx in (0.0, 245.0)
+                                        for x, y, r in ((4.0, 4.5, 0), (18.0, 88.85, 0),
+                                                        (141.45, 4.5, "outer-down"), (155.45, 121.9, "outer-up"))])],
+     "POM 1.5 mm"),
     # three keyboards' worth on the largest sheet: one row per set, then the gasket pads
     ("eugeo-foam_poron-3mm_500x300.svg", "Laser_poron_template.svg", "500x300", (500, 300),
      [("foam/eugeo-plate-foam.kicad_pcb", 2), ("foam/eugeo-case-foam-left.kicad_pcb", 1),
