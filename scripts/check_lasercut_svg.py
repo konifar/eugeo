@@ -17,7 +17,7 @@ CUT_COLORS = {"#ff0000", "#0000ff", "#00ff00", "#ff00ff", "#ff6600"}
 EXPECT = {  # file prefix -> (parts, {hole diameters mm})
     "eugeo-cover": (1, {2.2}),
     "eugeo-switch-plate": (2, {2.2}),
-    "eugeo-foam": (24, {4.4, 7.0}),
+    "eugeo-foam": (72, {4.4}),        # 3 sets: plate foam x2, case foam L / R, gasket pad x20
 }
 
 

@@ -20,9 +20,9 @@ fab plates/eugeo-cover.kicad_pcb eugeo-cover
 
 # DXF for laser cutters (plates, foams) and 1:1 PDF templates for cutting foam by hand
 dxf() { "$CLI" pcb export dxf --mode-single --layers Edge.Cuts --output-units mm -o "${1%.kicad_pcb}.dxf" "$1" >/dev/null && echo "${1%.kicad_pcb}.dxf"; }
-for b in plates/eugeo-plate plates/eugeo-cover plates/eugeo-bottom foam/eugeo-plate-foam foam/eugeo-case-foam foam/eugeo-gasket-pad; do
+for b in plates/eugeo-plate plates/eugeo-cover plates/eugeo-bottom foam/eugeo-plate-foam foam/eugeo-case-foam-left foam/eugeo-case-foam-right foam/eugeo-gasket-pad; do
   dxf "$b.kicad_pcb"
 done
-for b in foam/eugeo-plate-foam foam/eugeo-case-foam foam/eugeo-gasket-pad; do
+for b in foam/eugeo-plate-foam foam/eugeo-case-foam-left foam/eugeo-case-foam-right foam/eugeo-gasket-pad; do
   "$CLI" pcb export pdf --layers Edge.Cuts,Dwgs.User --black-and-white -o "$b-1to1.pdf" "$b.kicad_pcb" >/dev/null && echo "$b-1to1.pdf"
 done

@@ -24,13 +24,13 @@
 | screw | 16 | M2×3 なべ | プレート → スペーサー 8 本、PCB の裏 → スペーサー 8 本 | [遊舎工房](https://shop.yushakobo.jp/products/a0800n2) |
 | screw | 8 | M2×10 なべ | ケース 下トレイ → 上フレーム（底から） | ホームセンターなど（遊舎工房は 8 mm まで） |
 | nut | 8 | M2 六角ナット | 上フレームのナット穴に入れる | 遊舎工房 |
-| gasket | 20 | 3mm PORON 10×4mm | プレートのタブの上下（`foam/eugeo-gasket-pad`、フォームと同じシートで切る） | |
+| gasket | 20 | 3mm PORON 10×4mm | プレートのタブの上下（`foam/eugeo-gasket-pad`、フォームと同じシートで切る。シートには 3 台分 60 個） | |
 | feet | 4 | ゴム足 φ8〜10mm | ケース底の四隅の平らな面に貼る | |
 | cover | 1 | `lasercut/yushakobo/eugeo-cover_*.svg` | 中央カバー（アクリル クリア 2mm、遊舎工房レーザー加工） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut) |
 | standoff | 4 | M2 10mm メス-メス | PCB - 中央カバー間 | |
 | screw | 8 | M2×4 | 中央カバーのスペーサー固定（PCB 下 4 本 + カバー上 4 本） | |
 | plate foam | 2 | 3mm PORON | `foam/eugeo-plate-foam`（任意） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) |
-| case foam | 2 | 3mm PORON | `foam/eugeo-case-foam`（任意） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) |
+| case foam | 2 | 3mm PORON | `foam/eugeo-case-foam-left` + `-right`（ソケットの逃げ穴付き、左右で別形状） | [遊舎工房](https://shop.yushakobo.jp/products/lasercut-2) 500x300 シートに 3 台分 |
 
 ケースを使わない場合は、ケースの代わりにボトムプレート（`gerbers/eugeo-bottom.zip`）、PCB とボトムの間に M2 8mm スペーサー 8 本、M2×4 ネジ 16 本を使います。
 

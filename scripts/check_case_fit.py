@@ -6,7 +6,7 @@
 import os
 import sys
 
-from build123d import Box, Compound, Pos, import_step
+from build123d import Box, Compound, Cylinder, Pos, import_step
 
 sys.path.insert(0, os.path.dirname(__file__))
 import case as C  # noqa: E402
@@ -35,6 +35,7 @@ def main(pcb_step):
     parts = [shift * s for s in solids if s is not board]
 
     # hot-swap sockets have no 3D model: approximate body + pads under every key
+    n_pcb_parts = len(parts)
     for cx in design.KEY_X:
         for cy in design.KEY_Y:
             x, y = C.to_case(cx, cy)
@@ -77,8 +78,31 @@ def main(pcb_step):
             if vol(case.intersect(probe)) > 1e-3:
                 squeezed += 1
     print("gasket tabs:", len(tabs), "/ pad spaces blocked:", squeezed)
-    print("board underside clearance to floor:", -C.FLOOR_TOP, "mm; lowest part bottom:",
-          round(min(p.bounding_box().min.Z for p in parts), 2), "mm")
+    print("board underside clearance to floor:", -C.FLOOR_TOP, "mm (centre),", -C.KEY_FLOOR,
+          "mm (key areas); lowest part bottom:", round(min(p.bounding_box().min.Z for p in parts), 2), "mm")
+    # case foam, squeezed between the raised floor and the PCB: only the sockets' cut-outs may be empty
+    from foam_solids import foam_solid
+    # sockets as in eugeo:MX_Hotswap_Kailh: body (B.Fab) 1.85 mm tall, solder tabs, and the
+    # switch centre post / pegs poking through the PCB
+    sockets = []
+    for cx in design.KEY_X:
+        for cy in design.KEY_Y:
+            for (x1, y1, x2, y2), h in (((-6.05, -6.8, 4.85, -0.8), 1.85), ((4.565, -6.33, 7.115, -3.83), 0.5),
+                                        ((-8.365, -3.79, -5.815, -1.29), 0.5)):
+                x, y = C.to_case(cx + (x1 + x2) / 2, cy + (y1 + y2) / 2)
+                sockets.append(Pos(x, y, -h / 2) * Box(x2 - x1, y2 - y1, h))
+            for dx, r in ((0, 2.0), (-5.08, 0.875), (5.08, 0.875)):
+                x, y = C.to_case(cx + dx, cy)
+                sockets.append(Pos(x, y, -0.75) * Cylinder(r, 1.5))
+    t = -C.KEY_FLOOR
+    for side in ("left", "right"):
+        foam = foam_solid(f"foam/eugeo-case-foam-{side}.kicad_pcb", C.KEY_FLOOR + 0.01, t - 0.02)
+        hit = [p for p in sockets + parts[:n_pcb_parts] if vol(foam.intersect(p)) > 1e-3]
+        in_case = vol(case.intersect(foam))
+        area = foam.volume / (t - 0.02)
+        support = vol(case.intersect(Pos(0, 0, -0.02) * foam)) / (area * 0.01)
+        print(f"case foam {side}: {t:.1f} mm between floor and PCB ({design.CASE_FOAM_T} mm PORON), "
+              f"socket / part hits: {len(hit)}, case overlap: {in_case:.2f} mm3, resting on the floor: {support:.0%}")
 
     # centre cover: nothing may reach the acrylic, and it must not touch the case
     cover = C.cover_solid()

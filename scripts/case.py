@@ -6,7 +6,8 @@ Coordinates: X/Y follow the PCB (centre of the board = origin, +Y = back / USB s
 Z = 0 is the underside of the PCB.
 
 Two pieces split at the middle of the switch plate:
-  bottom tray : floor, walls, USB-C opening, nameplate, lower half of the tab recesses
+  bottom tray : floor (raised under the key areas for the case foam), walls, USB-C opening,
+                nameplate, lower half of the tab recesses
   top frame   : the rim above the plates, upper half of the tab recesses, M2 nut pockets
 The switch plates (PCB hanging from them on M2 3.5 mm standoffs) rest on PORON pads in
 the tab recesses and are clamped by pads in the top frame; nothing else touches the case.
@@ -40,7 +41,8 @@ PLATE_TOP = PCB_T + 5.0                              # MX: plate top is 5 mm abo
 CLEARANCE = design.CASE_CLEARANCE  # keycaps sit ~1.1 mm off the wall
 WALL = 8.0               # pocket wall to outer surface (at the rim)
 Z_TOP = PLATE_TOP + 6.5  # rim height: hides the switch housings, keycaps sit just above (high profile)
-FLOOR_TOP = -5.0         # space under the PCB for the USB-C receptacle / sockets / leads
+FLOOR_TOP = -5.0         # space under the PCB for the USB-C receptacle and the centre parts
+KEY_FLOOR = -(design.CASE_FOAM_T - design.CASE_FOAM_PRELOAD)   # raised floor under the key areas: case foam touches the PCB
 FLOOR_T = 3.0
 FRONT_BOTTOM = -10.0     # outer bottom at the front edge
 ANGLE = 6.0              # typing angle (deg)
@@ -155,6 +157,19 @@ def main():
             RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, HOLLOW_CORNER_R)
         extrude(amount=floor_bottom - (back_bottom - 2), mode=Mode.SUBTRACT)
 
+        # raised floor under both key areas (the centre keeps the deeper floor for USB-C etc.),
+        # with the hollow underside raised by the same amount to keep the floor thickness
+        for xa, xb in key_floor_x(pocket_w):
+            with BuildSketch(Plane.XY.offset(FLOOR_TOP - 0.01)):
+                with Locations(((xa + xb) / 2, 0)):
+                    Rectangle(xb - xa, pocket_h)
+            extrude(amount=KEY_FLOOR - FLOOR_TOP + 0.01)
+            with BuildSketch(Plane.XY.offset(floor_bottom - 0.01)):
+                RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, HOLLOW_CORNER_R)
+                with Locations(((xa + xb) / 2, 0)):
+                    Rectangle(xb - xa, outer_h, mode=Mode.INTERSECT)
+            extrude(amount=KEY_FLOOR - FLOOR_TOP + 0.01, mode=Mode.SUBTRACT)
+
         # tab recesses: the plates' gasket tabs and their PORON pads sit in these
         for x0, x1_, y0, y1_ in tab_recesses():
             with BuildSketch(Plane.XY.offset(RECESS_Z[0])):
@@ -232,6 +247,12 @@ def tab_recesses():
                     x0, x1_ = -x1_, -x0
                 out.append((x0, x1_, y - w / 2 - pad, y + w / 2 + pad))
     return out
+
+
+def key_floor_x(pocket_w):
+    """[(x0, x1)] in case coordinates of the raised floor under the left and right key areas."""
+    edge = design.LEFT_END - CX
+    return [(-pocket_w / 2 - 0.5, edge), (-edge, pocket_w / 2 + 0.5)]
 
 
 def screw_points(outer_w, outer_h):

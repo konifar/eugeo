@@ -31,15 +31,19 @@ STROKE_MM = 0.001
 MARGIN = 8.0      # from the sheet edge (template asks for >= 3 mm)
 GAP = 5.0         # between parts (template asks for >= 2 mm)
 
+FOAM_SETS = 3
+
 JOBS = [
     # output name, template, size layer, sheet (w, h), [(board, copies)], material note
     ("eugeo-cover_acrylic-clear-2mm_115x300.svg", "Laser_acrylic_template.svg", "115x300", (115, 300),
      [("plates/eugeo-cover.kicad_pcb", 1)], "acrylic clear 2 mm"),
     ("eugeo-switch-plate_pom-1.5mm_245x245.svg", "Laser_pom_template.svg", "245x245", (245, 245),
      [("plates/eugeo-plate.kicad_pcb", 2)], "POM 1.5 mm"),
-    ("eugeo-foam_poron-3mm_500x100.svg", "Laser_poron_template.svg", "500x100", (500, 100),
-     [("foam/eugeo-plate-foam.kicad_pcb", 2), ("foam/eugeo-case-foam.kicad_pcb", 2),
-      ("foam/eugeo-gasket-pad.kicad_pcb", 20)], "PORON 3 mm"),
+    # three keyboards' worth on the largest sheet: one row per set, then the gasket pads
+    ("eugeo-foam_poron-3mm_500x300.svg", "Laser_poron_template.svg", "500x300", (500, 300),
+     [("foam/eugeo-plate-foam.kicad_pcb", 2), ("foam/eugeo-case-foam-left.kicad_pcb", 1),
+      ("foam/eugeo-case-foam-right.kicad_pcb", 1)] * FOAM_SETS
+     + [("foam/eugeo-gasket-pad.kicad_pcb", 20 * FOAM_SETS)], "PORON 3 mm"),
 ]
 
 
@@ -154,7 +158,7 @@ def build(name, template, layer, sheet, boards, note, tdir):
         outer = max(range(len(loops)), key=lambda i: (lambda b: (b[2] - b[0]) * (b[3] - b[1]))(bbox([loops[i]])))
         for _ in range(copies):
             if x + w > sheet[0] - MARGIN:                 # next row
-                x, y = MARGIN, y + row_h + GAP
+                x, y, row_h = MARGIN, y + row_h + GAP, 0.0
             f = lambda p, ox=x, oy=y: ((p[0] - x1 + ox) * k, (p[1] - y1 + oy) * k)
             for i, loop in enumerate(loops):
                 ET.SubElement(layer_el, "{%s}path" % NS["svg"],

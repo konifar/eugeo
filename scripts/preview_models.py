@@ -16,6 +16,7 @@ from build123d import (Align, BuildPart, BuildSketch, Circle, Compound, Cylinder
 sys.path.insert(0, os.path.dirname(__file__))
 import case as C  # noqa: E402
 import design  # noqa: E402
+from foam_solids import foam_solid  # noqa: E402
 
 
 def main(out):
@@ -63,16 +64,8 @@ def main(out):
                     Circle(2.2, mode=Mode.SUBTRACT)
             extrude(amount=3.0)
         foams.append(pf.part)
-        inset = design.CASE_CLEARANCE - 0.5              # case foam on the floor
-        fa, fb = sorted((mirror(x1 - inset), mirror(design.LEFT_END - 0.5)))
-        with BuildPart() as cf:
-            with BuildSketch(Plane.XY.offset(C.FLOOR_TOP)):
-                with Locations(C.to_case((fa + fb) / 2, (y1 + y2) / 2)):
-                    RectangleRounded(fb - fa, y2 - y1 + 2 * inset, 1.5)
-                with Locations(*[C.to_case(mirror(hx), hy) for hx, hy in design.HOLES[:4]]):
-                    Circle((design.CASE_BOSS_D + 1.5) / 2, mode=Mode.SUBTRACT)
-            extrude(amount=3.0)
-        case_foams.append(cf.part)
+        side = "right" if right else "left"            # case foam on the raised floor, squeezed to the PCB
+        case_foams.append(foam_solid(f"foam/eugeo-case-foam-{side}.kicad_pcb", C.KEY_FLOOR, -C.KEY_FLOOR))
     switches, caps = [], []
     for kx in design.KEY_X:
         for ky in design.KEY_Y:

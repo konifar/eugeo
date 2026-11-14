@@ -239,6 +239,9 @@ COVER_STANDOFF = 10.0             # above the PCB top surface
 # shared by case.py and build_foams.py
 CASE_CLEARANCE = 1.0     # PCB edge to case pocket wall
 CASE_BOSS_D = 5.5        # clearance around the M2 screw heads under the PCB (case foam holes)
+CASE_FOAM_T = 3.0        # PORON under the PCB, cut out around the hot-swap sockets
+CASE_FOAM_PRELOAD = 0.2  # the raised floor under the key areas squeezes it this much against the PCB
+FOAM_PAGE_OFFSET = (20.0, 20.0)   # foam boards are drawn this far from the origin (1:1 print margins)
 
 # Gasket mount: each switch plate has tabs on its outer edges, sandwiched between PORON
 # pads in recesses of a two-piece case (bottom tray + top frame). The PCB hangs from the
