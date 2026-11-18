@@ -63,6 +63,11 @@ SCREW_D = 2.8            # M2 clearance (+0.2 mm paint on each side)
 HEAD_D = 5.0             # M2 pan head counterbore (ISO 7045 head 4.0 mm, + paint)
 SCREW_INSET = 4.2        # screw axis from the outer wall surface
 HEAD_SEAT = Z_SPLIT - 7.6                      # M2x10: tip 2.4 mm above the split, through the nut
+SCREW_BOSS_R = HEAD_D / 2 + 1.5                # solid column kept around each counterbore in the hollow underside
+# ribs across the hollow underside: stiffen the floor (less drumming, less warping) and split the cavity
+RIB_T = 2.0
+RIB_X = (-108.0, -72.0, -36.0, 0.0, 36.0, 72.0, 108.0)   # front-to-back ribs
+RIB_Y = (0.0,)                                            # left-to-right rib
 NUT_AF, NUT_T = 4.7, 1.8                       # M2 nut pocket (4.0 mm AF, + paint); 1.8 deep so the painted ceiling (~1.6) clamps the 1.6 mm nut
 USB_W, USB_H = 14.0, 9.5  # room for the plug overmold and the board moving on its gaskets
 USB_Z = -1.63             # receptacle centre (TYPE-C-31-M-12 on the back side)
@@ -152,9 +157,20 @@ def main():
                if inside_pocket(e)]
         fillet(rim, RIM_FILLET)
 
-        # hollow underside, leaving a floor and a ring to stand on
+        # hollow underside, leaving a floor, a ring to stand on, a boss around each screw and ribs
+        screws = screw_points(outer_w, outer_h)
+
+        def keep_solid():
+            with Locations(*screws):
+                Circle(SCREW_BOSS_R, mode=Mode.SUBTRACT)
+            with Locations(*[(x, 0) for x in RIB_X]):
+                Rectangle(RIB_T, outer_h, mode=Mode.SUBTRACT)
+            with Locations(*[(0, y) for y in RIB_Y]):
+                Rectangle(outer_w, RIB_T, mode=Mode.SUBTRACT)
+
         with BuildSketch(Plane.XY.offset(back_bottom - 2)):
             RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, HOLLOW_CORNER_R)
+            keep_solid()
         extrude(amount=floor_bottom - (back_bottom - 2), mode=Mode.SUBTRACT)
 
         # raised floor under both key areas (the centre keeps the deeper floor for USB-C etc.),
@@ -168,6 +184,7 @@ def main():
                 RectangleRounded(outer_w - 2 * BOTTOM_RIM, outer_h - 2 * BOTTOM_RIM, HOLLOW_CORNER_R)
                 with Locations(((xa + xb) / 2, 0)):
                     Rectangle(xb - xa, outer_h, mode=Mode.INTERSECT)
+                keep_solid()
             extrude(amount=KEY_FLOOR - FLOOR_TOP + 0.01, mode=Mode.SUBTRACT)
 
         # tab recesses: the plates' gasket tabs and their PORON pads sit in these
